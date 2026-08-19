@@ -230,10 +230,12 @@ cards.
   `actionlint` is not installed locally; Gitleaks runs when CI is triggered.
 - **Decisions/assumptions:** CI runs on all branch pushes and pull requests
   because the repository's remote default branch is not discoverable locally;
-  this necessarily includes the GitHub default branch. The workflow uses
-  `contents: read`, a ten-minute timeout, a locked `uv` environment, and no
-  service or provider calls after dependency installation. Gitleaks uses an
-  immutable v3 action pin and scans repository history in a separate CI job.
+  this necessarily includes the GitHub default branch. The workflow uses only
+  `contents: read` and `pull-requests: read`, a ten-minute timeout, a locked
+  `uv` environment, and no service or provider calls after dependency
+  installation. Gitleaks uses an immutable v3 action pin and scans repository
+  history in a separate CI job; its PR commit lookup requires the narrow
+  pull-request read permission.
 - **Risks or blockers:** none recorded
 - **Follow-ups (not started):** CI execution on GitHub is pending the next push;
   do not add deployment or live-service jobs in this card.

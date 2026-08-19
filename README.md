@@ -93,18 +93,11 @@ before recovering a failed local migration.
 
 The backend requires the PostgreSQL variables in `.env`; no database password,
 name, user, or port is invented at startup. After configuring and starting the
-local database, make its development-only variables available to the process:
+local database, start the loopback-only API server. The target loads the
+development-only `.env` variables for this command:
 
 ```shell
-set -a
-. ./.env
-set +a
-```
-
-Start the local API server:
-
-```shell
-uv run uvicorn --factory contour.bootstrap:create_app_from_environment --host 127.0.0.1 --port 8000
+make run
 ```
 
 In a separate terminal, liveness confirms only that the process can respond;

@@ -12,6 +12,8 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Framework-independent, immutable Phase 0 source/version/evidence identity
+  primitives with exact locators and explicit unknown temporal values.
 - A bounded repository-native task queue with explicit ownership, acceptance,
   review, archival, and human/agent handoff rules.
 - Installable Python 3.14 backend package foundation with a locked development
@@ -29,3 +31,5 @@ date without rewriting what was actually delivered.
 - Explicit backend composition-root, router/controller, Pydantic API-schema,
   application-service, adapter, package-namespace, and proportional-testing
   boundaries, with enforced Google-style production docstrings.
+- Generated frontend-consumable OpenAPI artifact with deterministic drift
+  verification in the backend quality floor.

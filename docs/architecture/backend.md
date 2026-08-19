@@ -67,8 +67,7 @@ cost.
 
 Contour uses ports-and-adapters boundaries with use-case-oriented application
 services. Names such as controller, service, repository, model, and DTO describe
-responsibilities; they do not require one class per file or a generic framework
-base class.
+responsibilities; they do not require a generic framework base class.
 
 ```text
 HTTP request
@@ -105,11 +104,14 @@ or a second `contour.core` catch-all. Split a delivery adapter into another
 distribution only when it has a real independent versioning, ownership, reuse,
 or deployment boundary with its own project metadata.
 
-Keep a small capability cohesive in one module. Split it into a package when it
-has independently meaningful commands, queries, policies, ports, or tests; do
-not create empty `services`, `repositories`, `controllers`, or `utils`
-directories in anticipation of growth. FastAPI routers are Contour's HTTP
-controllers. Server-rendered views are not part of this backend.
+Each new top-level production class has its own capability-named Python file. Keep
+package-wide constants, type aliases, and validation helpers in one clearly
+named shared module within the owning package. Split existing multi-class
+modules when they are materially changed; do not churn stable code solely to
+move declarations. Do not create empty `services`, `repositories`,
+`controllers`, or `utils` directories in anticipation of growth. FastAPI
+routers are Contour's HTTP controllers. Server-rendered views are not part of
+this backend.
 
 HTTP, a future CLI, a future MCP server, workers, and tests are peer delivery
 adapters. They may translate their own inputs and outputs, but they invoke the

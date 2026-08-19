@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from contour.api.app import create_app
+from contour.bootstrap import create_http_app
 from contour.config import Settings
 
 
@@ -30,7 +30,7 @@ def settings() -> Settings:
 
 
 def test_liveness_does_not_require_database_availability() -> None:
-    client = TestClient(create_app(settings(), UnavailableProbe()))
+    client = TestClient(create_http_app(settings(), UnavailableProbe()))
 
     response = client.get("/health/live")
 
@@ -39,7 +39,7 @@ def test_liveness_does_not_require_database_availability() -> None:
 
 
 def test_readiness_reports_available_required_dependency() -> None:
-    client = TestClient(create_app(settings(), AvailableProbe()))
+    client = TestClient(create_http_app(settings(), AvailableProbe()))
 
     response = client.get("/health/ready")
 
@@ -48,7 +48,7 @@ def test_readiness_reports_available_required_dependency() -> None:
 
 
 def test_readiness_returns_stable_redacted_dependency_error() -> None:
-    client = TestClient(create_app(settings(), UnavailableProbe()))
+    client = TestClient(create_http_app(settings(), UnavailableProbe()))
 
     response = client.get("/health/ready")
 

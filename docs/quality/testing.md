@@ -10,7 +10,47 @@ Contour has two separate correctness obligations:
 
 A green software suite does not prove knowledge quality.
 
+## Test admission and proportionality
+
+Test count and line coverage are not delivery goals. Admit a permanent test
+only when it protects a named behavior, external contract, knowledge invariant,
+security property, failure mode, or confirmed regression that is not already
+covered at a cheaper layer.
+
+Before adding a test:
+
+1. identify the realistic regression and the observable failure it would cause;
+2. find existing coverage and extend or parameterize it when that stays clear;
+3. choose the lowest-cost layer that can prove the behavior with useful
+   fidelity; and
+4. remove overlapping assertions that would fail for the same reason.
+
+Do not add tests merely because a file, class, method, branch, DTO field, or
+directory exists. Avoid tests of framework/library behavior, private call
+structure, constant values, generated boilerplate, or mocks that only repeat
+the implementation. A new module does not require a new test file. Prefer one
+representative success case and one case per materially distinct failure class;
+parameterize equivalent boundary inputs instead of copying test bodies.
+
+Match the verification budget to risk:
+
+- documentation-only, formatting, and behavior-preserving structural changes
+  normally need relevant static/documentation checks and existing tests, not
+  new behavioral tests;
+- small behavior changes need focused contract or regression coverage;
+- persistence, API, integration, or knowledge changes need the affected
+  boundary test plus only the lower-level tests required to locate failures; and
+- security, concurrency, migration, and blocking knowledge invariants require
+  direct tests at the strongest practical boundary.
+
+Consolidate or delete a test when its protected contract disappears, another
+test subsumes it, or its maintenance and runtime cost exceed its regression
+signal. Do not retain tests as historical artifacts.
+
 ## Test layers
+
+The layers below are options selected by affected risk, not a requirement to
+duplicate every behavior at every layer.
 
 ### Unit and property tests
 
@@ -51,7 +91,13 @@ When behavior affects extraction, retrieval, ranking, or generation, measure the
 
 ## Pull-request floor
 
-Once the corresponding tooling exists, every backend change should pass formatting, linting, typing, unit/property tests, migration checks, local integration tests, API contract tests, the small end-to-end fixture, and documentation validation relevant to the change.
+Every backend change passes the available fast deterministic floor: formatting,
+linting, typing, the default service-free test suite, and relevant documentation
+validation. Run migration, PostgreSQL integration, API contract, knowledge
+invariant, end-to-end, evaluation, or benchmark suites only when the change can
+affect that boundary or when its acceptance contract explicitly requires them.
+Record any relevant suite that could not run; do not run or expand unrelated
+suites merely to increase test counts.
 
 ## Definition of done
 

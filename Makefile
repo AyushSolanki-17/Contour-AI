@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test docs precommit hooks quality db-up db-ready db-psql db-stop
+.PHONY: format lint typecheck test test-integration docs precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
 
 format:
 	uv run ruff format --check .
@@ -11,6 +11,9 @@ typecheck:
 
 test:
 	uv run pytest
+
+test-integration:
+	uv run pytest --run-integration
 
 docs:
 	uv run python scripts/check_docs_links.py
@@ -32,5 +35,11 @@ db-psql:
 
 db-stop:
 	docker compose stop database
+
+migrate:
+	uv run alembic upgrade head
+
+migration-current:
+	uv run alembic current
 
 quality: format lint typecheck test

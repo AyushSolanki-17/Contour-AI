@@ -68,6 +68,27 @@ Compose service. See [local PostgreSQL instructions](docs/development/local-post
 for the verified configuration, start, readiness, connection, stop, and explicit
 destructive-reset commands.
 
+## Database migrations
+
+After exporting the configured PostgreSQL variables and starting the local
+database, apply the current schema revision with:
+
+```shell
+make migrate
+make migration-current
+```
+
+The default test suite never opens a database connection. Run the separately
+selected clean-database migration test against the disposable local development
+database with:
+
+```shell
+make test-integration
+```
+
+See the [migration recovery guidance](docs/development/local-postgresql.md#database-migrations)
+before recovering a failed local migration.
+
 ## Start the backend and check health
 
 The backend requires the PostgreSQL variables in `.env`; no database password,
@@ -83,7 +104,7 @@ set +a
 Start the local API server:
 
 ```shell
-uv run uvicorn --factory contour.api.app:create_app_from_environment --host 127.0.0.1 --port 8000
+uv run uvicorn --factory contour.bootstrap:create_app_from_environment --host 127.0.0.1 --port 8000
 ```
 
 In a separate terminal, liveness confirms only that the process can respond;

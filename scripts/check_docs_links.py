@@ -11,6 +11,14 @@ LINK_PATTERN = re.compile(r"(?<!!)\[[^]]*]\(([^)\s]+)(?:\s+[^)]*)?\)")
 
 
 def markdown_files(paths: list[Path]) -> list[Path]:
+    """Collect Markdown files from explicit files and recursive directories.
+
+    Args:
+        paths: Files or directories to inspect.
+
+    Returns:
+        Markdown file paths found in the supplied locations.
+    """
     files: list[Path] = []
     for path in paths:
         if path.is_dir():
@@ -21,6 +29,14 @@ def markdown_files(paths: list[Path]) -> list[Path]:
 
 
 def invalid_links(path: Path) -> list[str]:
+    """Find local Markdown link targets that do not exist.
+
+    Args:
+        path: Markdown document to inspect.
+
+    Returns:
+        Human-readable errors for missing local targets.
+    """
     errors: list[str] = []
     for target in LINK_PATTERN.findall(path.read_text(encoding="utf-8")):
         location = target.split("#", maxsplit=1)[0]
@@ -33,6 +49,11 @@ def invalid_links(path: Path) -> list[str]:
 
 
 def main() -> int:
+    """Run repository Markdown-link validation.
+
+    Returns:
+        Zero when all local targets exist; otherwise one.
+    """
     paths = [Path(argument) for argument in sys.argv[1:]] or [Path("README.md"), Path("docs")]
     errors = [error for path in markdown_files(paths) for error in invalid_links(path)]
     if errors:

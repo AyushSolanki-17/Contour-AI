@@ -68,6 +68,9 @@ the conflict explicitly rather than guessing.
 
 - Preserve established boundaries. Keep domain and application policy separate
   from transport, framework, database-driver, provider-SDK, and UI details.
+- For a Python backend API, module-boundary, repository, DTO/model, composition,
+  dependency-injection, or delivery-adapter decision, read
+  [Python backend architecture](references/python-backend-architecture.md).
 - Prefer cohesive functions and modules. Introduce a port, repository, pattern,
   or other abstraction only when it improves a real boundary, variation point,
   invariant, or test seam.
@@ -80,6 +83,15 @@ the conflict explicitly rather than guessing.
 - Write idiomatic modern Python with clear names, explicit behavior, useful type
   hints, cohesive functions, context-managed resources, and no hidden mutable
   global state.
+- Give every production function, method, and API endpoint a concise
+  Google-style docstring. Explain purpose and contract, and add `Args:`,
+  `Returns:`, and `Raises:` sections only when applicable; do not restate the
+  signature in prose. Descriptive test names may replace repetitive test
+  docstrings unless setup, intent, or failure behavior is non-obvious.
+- Use comments for the reason behind non-obvious logic, invariants, constraints,
+  or tradeoffs, not to narrate syntax. For genuinely complex multi-stage logic,
+  label major stages `Step 1`, `Step 2`, and nested stages `Step 2.A`,
+  `Step 2.B` so readers can follow the algorithm and failure boundaries.
 - Use async only for beneficial concurrent I/O. Never block an event loop,
   orphan tasks, create unbounded tasks, or ignore cancellation and cleanup.
 - Validate untrusted input at boundaries. Enforce authorization server-side and
@@ -102,9 +114,28 @@ the conflict explicitly rather than guessing.
   carry useful context without credentials or unnecessary sensitive data.
 - Preserve unrelated user changes and keep the patch focused.
 
+## Documentation changes
+
+- Integrate guidance into the existing section that owns the subject. If none
+  exists, add a named section beside the closest related material; do not append
+  an unrelated note at the beginning or end merely because that is convenient.
+- Preserve the document's audience, hierarchy, chronology, and source-of-truth
+  role. Put setup in public entry points, accepted design in architecture docs,
+  operating procedures in runbooks, and release-visible behavior in changelogs.
+- Update rather than duplicate existing guidance. Link to a controlling source
+  when another document only needs routing or a short contextual summary.
+- Read the surrounding headings and prose after editing so the document still
+  flows and planned versus implemented behavior remains accurate.
+
 ## Test and verify
 
+- For non-trivial test selection, suite growth, or test-architecture work, read
+  [Proportional testing strategy](references/testing-strategy.md).
 - Test behavior and contracts, not implementation trivia.
+- Admit a permanent test only for a named contract, invariant, failure mode,
+  security property, or confirmed regression that existing coverage does not
+  already protect at a cheaper layer. Do not target a test count or create tests
+  per file, class, method, branch, or DTO field.
 - Cover relevant normal, boundary, invalid-input, and failure behavior.
 - Add a regression test for a meaningful bug fix unless a concrete reason makes
   it impractical.

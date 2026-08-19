@@ -49,6 +49,39 @@ Open a `psql` session inside the container:
 make db-psql
 ```
 
+## Database migrations
+
+Export the configured variables to the shell, then apply the tracked migration
+head and confirm the recorded revision:
+
+```shell
+set -a
+. ./.env
+set +a
+make migrate
+make migration-current
+```
+
+`make migrate` is safe to re-run: it only applies revisions not already
+recorded in the database. The initial baseline intentionally creates no
+application tables; it establishes the migration history for the Phase 0.2
+schema work.
+
+If a migration fails, retain the error output and inspect the current revision
+with `make migration-current`. Do not use a destructive reset as ordinary
+recovery. For a disposable local development database only, use the explicit
+reset below, then run `make db-up`, `make db-ready`, and `make migrate` to
+restore a clean state. Production migration orchestration and automatic
+downgrade are not implemented.
+
+The clean-database migration integration test is deliberately opt-in because it
+creates and drops an isolated database on the configured local PostgreSQL
+server:
+
+```shell
+make test-integration
+```
+
 ## Stop and restart
 
 Stop the container while preserving the named volume:

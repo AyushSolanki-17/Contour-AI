@@ -22,6 +22,10 @@ development-only password:
 cp .env.example .env
 ```
 
+The same variables are the backend's required database configuration. The
+optional `CONTOUR_POSTGRES_HOST` defaults to `127.0.0.1`; keep it aligned with
+the loopback-only Compose listener for local use.
+
 Start PostgreSQL in the background:
 
 ```shell

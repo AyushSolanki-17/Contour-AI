@@ -72,7 +72,7 @@ A card may narrow a roadmap item, but it may not silently expand or reorder it.
 | 1 | `P0-01` — Python project and local quality foundation | `done` | — | /root |
 | 2 | `P0-02` — Local PostgreSQL development runtime | `done` | — | /root |
 | 3 | `P0-03` — Continuous-integration quality gate | `review` | `P0-01` | /root |
-| 4 | `P0-04` — Settings, errors, logging, and health contracts | `queued` | `P0-01`, `P0-02` | unassigned |
+| 4 | `P0-04` — Settings, errors, logging, and health contracts | `review` | `P0-01`, `P0-02` | /root |
 | 5 | `P0-05` — Migration baseline and clean-database test | `queued` | `P0-01`, `P0-02` | unassigned |
 
 `P0-01` and `P0-02` have disjoint intended scopes and may be assigned in
@@ -242,8 +242,8 @@ cards.
 
 ## P0-04 — Settings, errors, logging, and health contracts
 
-- **Status:** `queued`
-- **Owner:** unassigned
+- **Status:** `review`
+- **Owner:** /root
 - **Reviewer:** unassigned
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
@@ -258,27 +258,41 @@ cards.
 
 ### Acceptance checklist
 
-- [ ] Missing or invalid required configuration fails clearly without fabricated
+- [x] Missing or invalid required configuration fails clearly without fabricated
       defaults.
-- [ ] Secrets are accepted by reference/environment and are absent from error,
+- [x] Secrets are accepted by reference/environment and are absent from error,
       representation, and log output tests.
-- [ ] Application errors have a stable internal shape independent of FastAPI;
+- [x] Application errors have a stable internal shape independent of FastAPI;
       HTTP translation remains in the API layer.
-- [ ] Liveness proves the process can respond; readiness fails when required
+- [x] Liveness proves the process can respond; readiness fails when required
       dependencies are unavailable and does not report an empty success.
-- [ ] Package dependency direction follows the backend architecture.
-- [ ] Tests cover valid configuration, invalid configuration, redaction,
+- [x] Package dependency direction follows the backend architecture.
+- [x] Tests cover valid configuration, invalid configuration, redaction,
       liveness, readiness success, and readiness failure.
-- [ ] Startup and health usage are documented and recorded in `CHANGELOG.md`.
+- [x] Startup and health usage are documented and recorded in `CHANGELOG.md`.
 
 ### Handoff
 
-- **Summary:** pending
-- **Files changed:** pending
-- **Verification and results:** pending
-- **Decisions/assumptions:** pending
+- **Summary:** Added validated PostgreSQL environment settings, secret-safe
+  logging, stable framework-independent application errors, and a minimal
+  FastAPI liveness/readiness contract.
+- **Files changed:** `pyproject.toml`, `uv.lock`, `.env.example`,
+  `src/contour/config.py`, `src/contour/logging.py`,
+  `src/contour/application/`, `src/contour/adapters/`, `src/contour/api/`,
+  `tests/test_config.py`, `tests/test_logging.py`, `tests/test_health_api.py`,
+  `README.md`, `docs/development/local-postgresql.md`, `CHANGELOG.md`, and
+  this queue.
+- **Verification and results:** `uv run ruff format --check .`, `uv run ruff
+  check .`, `uv run mypy`, and `uv run pytest` passed (12 tests). The suite
+  emits one upstream Starlette `TestClient` deprecation warning only.
+- **Decisions/assumptions:** The existing Compose variables are the public
+  application database contract, with loopback host as the local-only default.
+  Readiness opens a new PostgreSQL connection with a three-second connection
+  timeout and runs `SELECT 1`; liveness deliberately does neither. API errors
+  expose a stable code and safe message rather than adapter failures.
 - **Risks or blockers:** none recorded
-- **Follow-ups (not started):** pending
+- **Follow-ups (not started):** Configure server log shipping and richer
+  telemetry only when later Phase 0 work needs them.
 
 ---
 

@@ -67,3 +67,33 @@ The Phase 0 local development database is a pinned, loopback-only PostgreSQL
 Compose service. See [local PostgreSQL instructions](docs/development/local-postgresql.md)
 for the verified configuration, start, readiness, connection, stop, and explicit
 destructive-reset commands.
+
+## Start the backend and check health
+
+The backend requires the PostgreSQL variables in `.env`; no database password,
+name, user, or port is invented at startup. After configuring and starting the
+local database, make its development-only variables available to the process:
+
+```shell
+set -a
+. ./.env
+set +a
+```
+
+Start the local API server:
+
+```shell
+uv run uvicorn --factory contour.api.app:create_app_from_environment --host 127.0.0.1 --port 8000
+```
+
+In a separate terminal, liveness confirms only that the process can respond;
+readiness also proves PostgreSQL accepts a connection and query:
+
+```shell
+curl --fail http://127.0.0.1:8000/health/live
+curl --fail http://127.0.0.1:8000/health/ready
+```
+
+When PostgreSQL is unavailable, `/health/ready` returns HTTP 503 with the
+stable `dependency.unavailable` error code. It does not expose connection or
+credential details.

@@ -21,3 +21,6 @@ date without rewriting what was actually delivered.
 - GitHub Actions quality gate for locked Python checks, documentation links, and
   repository-history secret scanning with Gitleaks.
 - Gitleaks pre-commit scanning for staged secrets before they enter Git history.
+- Validated PostgreSQL runtime settings, redacted application logging, and a
+  minimal FastAPI health contract with separate liveness and database-aware
+  readiness endpoints.

@@ -1,5 +1,7 @@
 """Framework-independent domain values for Contour's knowledge model."""
 
+from contour.domain.catalog import Source, Workspace
+from contour.domain.execution import Job, Run
 from contour.domain.identifiers import (
     ContentDigest,
     EntityId,
@@ -11,7 +13,7 @@ from contour.domain.identifiers import (
     SourceVersionId,
     WorkspaceId,
 )
-from contour.domain.records import Entity, Job, Relationship, Run, Source, Workspace
+from contour.domain.knowledge import Entity, Relationship
 from contour.domain.source import EvidenceLocator, SourceVersion
 from contour.domain.time import TimePoint
 

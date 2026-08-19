@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test test-integration docs precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
+.PHONY: format lint typecheck source-size test test-integration docs precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
 
 format:
 	uv run ruff format --check .
@@ -8,6 +8,9 @@ lint:
 
 typecheck:
 	uv run mypy
+
+source-size:
+	uv run python scripts/check_source_size.py
 
 test:
 	uv run pytest
@@ -42,4 +45,4 @@ migrate:
 migration-current:
 	uv run alembic current
 
-quality: format lint typecheck test
+quality: format lint typecheck source-size test

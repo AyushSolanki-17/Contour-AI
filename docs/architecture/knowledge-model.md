@@ -28,6 +28,21 @@ Claims, events, investigations, findings, dispositions, decisions, and detailed 
 4. Keep possible duplicates as candidates until evidence or a deterministic rule resolves them.
 5. Record merge and split decisions as reversible events; never silently merge.
 
+### Phase 0 source identity representation
+
+The initial domain values keep source identifiers as an uppercase namespace and
+a source-owned local value (for example, `SOURCE:PEP:723`). A source version is
+identified by that source identifier and the SHA-256 digest of the exact bytes
+admitted to Contour, serialized as `SOURCE:PEP:723@sha256:<digest>`. Upstream
+revision metadata is retained separately because it can be absent or change in
+format; it does not replace the content identity.
+
+Evidence locators always carry this source-version identity. They can identify
+a structured field (such as `header:Replaces`) and, when byte offsets are
+available, a non-empty half-open byte span. The acquisition slice will specify
+the byte canonicalization and artifact-storage policy; until then, the digest
+means SHA-256 over the exact admitted bytes.
+
 ## Evidence and provenance
 
 The minimum inspectable chain is:

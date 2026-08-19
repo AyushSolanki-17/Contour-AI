@@ -69,10 +69,9 @@ slice.
   such as `models` or `utils`. A small set of classes may share a module only
   when they change together and form one clear concept; split unrelated records,
   services, or state machines into capability-focused modules.
-- Treat 400 lines as a review threshold and 600 lines as a hard limit for a
-  handwritten production Python module. Split by responsibility before the hard
-  limit; generated code, migrations, and fixture data may exceed it when their
-  provenance is clear. An exception needs a brief nearby rationale.
+- Treat roughly 400 lines as a review prompt for a handwritten production Python
+  module. Split by responsibility when doing so makes the code easier to follow;
+  generated code, migrations, and fixture data are assessed by their own needs.
 - Give every production function, method, and API endpoint a concise
   Google-style docstring that explains its contract rather than restating its
   name. Document arguments, returns, and raised errors when they are meaningful.

@@ -51,3 +51,10 @@ make hooks
 Run those checks manually with `make precommit`. They reject accidental private
 keys, merge-conflict markers, invalid TOML, oversized added files, whitespace
 errors, and Python lint/format drift.
+
+## Local PostgreSQL
+
+The Phase 0 local development database is a pinned, loopback-only PostgreSQL
+Compose service. See [local PostgreSQL instructions](docs/development/local-postgresql.md)
+for the verified configuration, start, readiness, connection, stop, and explicit
+destructive-reset commands.

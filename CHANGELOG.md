@@ -16,3 +16,5 @@ date without rewriting what was actually delivered.
   review, archival, and human/agent handoff rules.
 - Installable Python 3.14 backend package foundation with a locked development
   environment and deterministic format, lint, type, and test commands.
+- Local pinned PostgreSQL Compose runtime with a loopback-only listener,
+  persistent development volume, readiness probe, and documented reset flow.

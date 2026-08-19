@@ -70,7 +70,7 @@ A card may narrow a roadmap item, but it may not silently expand or reorder it.
 | Order | Task | Status | Depends on | Owner |
 |---:|---|---|---|---|
 | 1 | `P0-01` — Python project and local quality foundation | `done` | — | /root |
-| 2 | `P0-02` — Local PostgreSQL development runtime | `ready` | — | unassigned |
+| 2 | `P0-02` — Local PostgreSQL development runtime | `review` | — | /root |
 | 3 | `P0-03` — Continuous-integration quality gate | `queued` | `P0-01` | unassigned |
 | 4 | `P0-04` — Settings, errors, logging, and health contracts | `queued` | `P0-01`, `P0-02` | unassigned |
 | 5 | `P0-05` — Migration baseline and clean-database test | `queued` | `P0-01`, `P0-02` | unassigned |
@@ -134,8 +134,8 @@ cards.
 
 ## P0-02 — Local PostgreSQL development runtime
 
-- **Status:** `ready`
-- **Owner:** unassigned
+- **Status:** `review`
+- **Owner:** /root
 - **Reviewer:** unassigned
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
@@ -152,26 +152,38 @@ cards.
 
 ### Acceptance checklist
 
-- [ ] The PostgreSQL image or package version is pinned explicitly.
-- [ ] Tracked files contain no real credentials, and the local credential flow
+- [x] The PostgreSQL image or package version is pinned explicitly.
+- [x] Tracked files contain no real credentials, and the local credential flow
       is documented.
-- [ ] Start, readiness, connection, stop, and clean-reset commands are
+- [x] Start, readiness, connection, stop, and clean-reset commands are
       documented and were exercised.
-- [ ] Normal stop/start preserves local data; clean reset is an explicit,
+- [x] Normal stop/start preserves local data; clean reset is an explicit,
       separately documented destructive action.
-- [ ] Configuration is narrow enough for local development and does not imply a
+- [x] Configuration is narrow enough for local development and does not imply a
       production deployment contract.
-- [ ] `README.md` links to the working local database instructions.
-- [ ] `CHANGELOG.md` records the new developer-facing runtime.
+- [x] `README.md` links to the working local database instructions.
+- [x] `CHANGELOG.md` records the new developer-facing runtime.
 
 ### Handoff
 
-- **Summary:** pending
-- **Files changed:** pending
-- **Verification and results:** pending
-- **Decisions/assumptions:** pending
+- **Summary:** Added a pinned, loopback-only local PostgreSQL Compose service
+  with an ignored development configuration, readiness probe, persistent named
+  volume, and explicit destructive reset procedure.
+- **Files changed:** `compose.yaml`, `.env.example`, `Makefile`,
+  `docs/development/local-postgresql.md`, `README.md`, `CHANGELOG.md`, and this
+  queue.
+- **Verification and results:** `docker compose config --quiet`, `make quality`,
+  `make precommit`, and `git diff --check` passed. The Docker lifecycle was
+  exercised: `make db-up`, `make db-ready`, in-container `psql` connection,
+  `make db-stop`, a restart that retained one inserted row, `docker compose down
+  --volumes --remove-orphans`, then a fresh start confirming the test table was
+  absent.
+- **Decisions/assumptions:** The explicitly pinned `postgres:17.2-alpine3.21`
+  image is sufficient for this local-only runtime. `.env` is ignored and starts
+  from a tracked non-secret template; the service binds only to `127.0.0.1`.
 - **Risks or blockers:** none recorded
-- **Follow-ups (not started):** pending
+- **Follow-ups (not started):** Application connection settings belong to
+  `P0-04`; schema and migration work remain outside this card.
 
 ---
 

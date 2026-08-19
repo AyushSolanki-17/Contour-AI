@@ -1,0 +1,20 @@
+services:
+  database:
+    image: postgres:17.2-alpine3.21
+    environment:
+      POSTGRES_DB: ${CONTOUR_POSTGRES_DB:?set CONTOUR_POSTGRES_DB in .env}
+      POSTGRES_USER: ${CONTOUR_POSTGRES_USER:?set CONTOUR_POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${CONTOUR_POSTGRES_PASSWORD:?set CONTOUR_POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${CONTOUR_POSTGRES_PORT:?set CONTOUR_POSTGRES_PORT in .env}:5432"
+    volumes:
+      - contour-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  contour-postgres-data:

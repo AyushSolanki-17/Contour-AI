@@ -48,8 +48,8 @@ Run the repository-wide checks used by CI with:
 make docs
 ```
 
-CI also runs Gitleaks against repository history; the installed pre-commit hook
-continues to reject private keys before a local commit.
+Gitleaks scans staged changes during pre-commit, while CI scans repository
+history as a second line of defense.
 
 Install the repository's commit-time checks once per clone:
 

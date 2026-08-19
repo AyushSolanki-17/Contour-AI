@@ -20,3 +20,4 @@ date without rewriting what was actually delivered.
   persistent development volume, readiness probe, and documented reset flow.
 - GitHub Actions quality gate for locked Python checks, documentation links, and
   repository-history secret scanning with Gitleaks.
+- Gitleaks pre-commit scanning for staged secrets before they enter Git history.

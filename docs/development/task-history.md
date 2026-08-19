@@ -1,7 +1,7 @@
 # Completed Task Log
 
 **Status:** append-only execution summary
-**Updated:** 2026-08-19
+**Updated:** 2026-08-20
 
 This log preserves concise outcomes after completed cards leave
 [the active queue](../../TASKS.md). It is an engineering handoff index, not a
@@ -20,3 +20,5 @@ the first accepted task is recorded.
 | `P0-03` | 2026-08-19 | Pull-request quality gate with locked checks, documentation-link validation, and repository-history secret scanning. | `e75f227 ci: add quality gate` |
 | `P0-04` | 2026-08-19 | Validated settings, redacted logging, stable application errors, and liveness/readiness HTTP contracts. | `d837359 feat: add runtime health contracts` |
 | `P0-05` | 2026-08-19 | Alembic baseline with repeatable local migration commands and opt-in clean-database integration coverage. | `4bf3dbc feat: establish backend architecture foundation` |
+| `P0-06` | 2026-08-20 | Typed source identity, immutable source versions, exact evidence locators, and explicit unknown time values. | `79377a1 feat: add source evidence domain primitives` |
+| `P0-07` | 2026-08-20 | Framework-independent workspace, source, entity, relationship, job, and run records with narrow persistence transaction ports. | `0f74b17 feat: complete phase zero domain records` |

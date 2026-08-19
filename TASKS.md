@@ -1,7 +1,7 @@
 # Contour Active Work
 
-**Status:** no active cards
-**Updated:** 2026-08-19
+**Status:** no active cards; three ordered follow-ups
+**Updated:** 2026-08-20
 
 This is the bounded execution queue for work promoted from the ordered
 [backend roadmap](docs/development/roadmap.md). Claim exactly one `ready` card
@@ -10,8 +10,137 @@ before implementation; a reviewer accepts it, records the result in the
 
 ## Active queue
 
-No tasks are currently active. The coordinator must promote the next smallest
-roadmap slice before implementation resumes.
+## Scheduled follow-ups
+
+These cards are deliberately `planned`, not simultaneously ready. Promote only
+the first card whose dependency has been accepted, and keep one backend card
+claimed at a time.
+
+### P0-08 — Persist the source catalog and evidence core
+
+Owner role: backend
+Assignee: unassigned
+Priority: P1
+Status: planned
+Depends on: `P0-07`
+Product: `PROD-P0-01`
+
+#### Goal
+
+Make workspaces, sources, immutable source versions, and exact evidence durable
+so later ingestion work has an authoritative catalog to write to and rebuild
+from.
+
+#### Requirements
+
+- Add the initial schema and persistence behavior for workspaces, sources,
+  source versions, and evidence locators.
+- Enforce stable identity, uniqueness, immutable version content, and exactly
+  one source version per evidence record where practical in both code and
+  storage.
+- Implement only the ports exercised by the catalog/evidence use cases with an
+  explicit transaction boundary.
+- Cover clean migration and representative round trips against an isolated
+  PostgreSQL database.
+- Do not add entity, relationship, job/run, API, acquisition, or indexing
+  behavior in this card.
+
+#### Acceptance criteria
+
+- [ ] A clean database migrates to the new schema and repeat migration remains
+      safe.
+- [ ] Workspace, source, immutable version, and evidence records round-trip
+      without losing namespace, digest, locator, or unknown-time meaning.
+- [ ] Duplicate identities, conflicting immutable content, and orphan evidence
+      fail rather than silently overwrite accepted state.
+- [ ] Failed writes do not leave a partially accepted catalog change.
+- [ ] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
+      `make openapi-check`, and `make docs` pass.
+
+### P0-09 — Persist knowledge and execution records
+
+Owner role: backend
+Assignee: unassigned
+Priority: P1
+Status: planned
+Depends on: `P0-08`
+Product: `PROD-P0-01`
+
+#### Goal
+
+Make basic entities, evidence-backed relationships, durable jobs, and distinct
+run attempts available to later extraction and worker slices without claiming
+that either workflow already executes.
+
+#### Requirements
+
+- Add the initial schema and persistence behavior for entities, relationships,
+  jobs, runs, and their required references.
+- Preserve edge-level evidence and prevent a credited relationship from being
+  stored without evidence or a complete derivation reference.
+- Preserve the distinction between one requested job and multiple run attempts,
+  including terminal failure and cancellation state.
+- Exercise transaction rollback and invalid-reference behavior in isolated
+  PostgreSQL integration checks.
+- Do not add worker polling, retries, source acquisition, extraction, search, or
+  HTTP routes in this card.
+
+#### Acceptance criteria
+
+- [ ] Entities and relationships round-trip with stable identity and exact
+      evidence references.
+- [ ] Jobs and run attempts retain explicit lifecycle, failure, cancellation,
+      and retry meaning without relying on process memory.
+- [ ] Orphan evidence, invalid endpoints, invalid transitions, and partial
+      writes are rejected safely.
+- [ ] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
+      `make openapi-check`, and `make docs` pass.
+
+### P0-10 — Establish deterministic PEP preflight and acquisition
+
+Owner role: backend
+Assignee: unassigned
+Priority: P1
+Status: planned
+Depends on: `P0-09`
+Product: `PROD-P0-01`
+
+#### Goal
+
+Prove a credential-free, deterministic supported-source boundary that can
+validate and acquire the pinned Phase 0 PEP fixture before durable orchestration
+and extraction are introduced.
+
+#### Requirements
+
+- Define the supported PEP source configuration and reject unsupported or
+  malformed scope before a job starts.
+- Acquire or load a pinned public fixture through the source boundary and
+  produce stable content identity plus available upstream revision metadata.
+- Classify validation, unavailable-source, timeout, malformed-content, and
+  integrity failures without exposing unsafe payloads.
+- Keep default tests offline and deterministic; live-network checks, if any,
+  must be explicit and non-default.
+- Do not add normalization, extraction, indexing, worker execution, or public
+  product routes in this card.
+
+#### Acceptance criteria
+
+- [ ] The same admitted fixture produces the same content identity and source
+      metadata across repeated runs.
+- [ ] Unsupported scope and malformed or integrity-invalid content fail before
+      accepted knowledge state is written.
+- [ ] Failure categories are actionable to later retry policy and do not leak
+      source payloads or credentials.
+- [ ] Focused offline tests, `make quality`, `make openapi-check`, and
+      `make docs` pass.
+
+## Promotion and handoff rule
+
+For every scheduled follow-up, the coordinator first confirms the dependency is
+accepted, then changes only that card to `ready`. An implementer claims exactly
+that card, moves it to `review` with verification evidence, and leaves
+acceptance and archival to a separate reviewer.
 
 ## Recently completed
 

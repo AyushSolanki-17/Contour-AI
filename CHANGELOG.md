@@ -18,3 +18,5 @@ date without rewriting what was actually delivered.
   environment and deterministic format, lint, type, and test commands.
 - Local pinned PostgreSQL Compose runtime with a loopback-only listener,
   persistent development volume, readiness probe, and documented reset flow.
+- GitHub Actions quality gate for locked Python checks, documentation links, and
+  repository-history secret scanning with Gitleaks.

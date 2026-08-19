@@ -32,7 +32,7 @@ environment, then install the exact locked environment:
 uv sync --locked --group dev
 ```
 
-Run the full deterministic local quality suite:
+Run the full deterministic Python quality suite:
 
 ```shell
 make quality
@@ -41,6 +41,15 @@ make quality
 The individual checks are `make format`, `make lint`, `make typecheck`, and
 `make test`. These commands do not require a running service, database, network
 source, or model after the locked environment is installed.
+
+Run the repository-wide checks used by CI with:
+
+```shell
+make docs
+```
+
+CI also runs Gitleaks against repository history; the installed pre-commit hook
+continues to reject private keys before a local commit.
 
 Install the repository's commit-time checks once per clone:
 

@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test precommit hooks quality db-up db-ready db-psql db-stop
+.PHONY: format lint typecheck test docs precommit hooks quality db-up db-ready db-psql db-stop
 
 format:
 	uv run ruff format --check .
@@ -11,6 +11,9 @@ typecheck:
 
 test:
 	uv run pytest
+
+docs:
+	uv run python scripts/check_docs_links.py
 
 precommit:
 	uv run pre-commit run --all-files

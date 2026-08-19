@@ -70,8 +70,8 @@ A card may narrow a roadmap item, but it may not silently expand or reorder it.
 | Order | Task | Status | Depends on | Owner |
 |---:|---|---|---|---|
 | 1 | `P0-01` — Python project and local quality foundation | `done` | — | /root |
-| 2 | `P0-02` — Local PostgreSQL development runtime | `review` | — | /root |
-| 3 | `P0-03` — Continuous-integration quality gate | `queued` | `P0-01` | unassigned |
+| 2 | `P0-02` — Local PostgreSQL development runtime | `done` | — | /root |
+| 3 | `P0-03` — Continuous-integration quality gate | `review` | `P0-01` | /root |
 | 4 | `P0-04` — Settings, errors, logging, and health contracts | `queued` | `P0-01`, `P0-02` | unassigned |
 | 5 | `P0-05` — Migration baseline and clean-database test | `queued` | `P0-01`, `P0-02` | unassigned |
 
@@ -134,9 +134,9 @@ cards.
 
 ## P0-02 — Local PostgreSQL development runtime
 
-- **Status:** `review`
+- **Status:** `done`
 - **Owner:** /root
-- **Reviewer:** unassigned
+- **Reviewer:** user
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
 - **Outcome:** A developer can start and stop the declared PostgreSQL version
@@ -189,8 +189,8 @@ cards.
 
 ## P0-03 — Continuous-integration quality gate
 
-- **Status:** `queued`
-- **Owner:** unassigned
+- **Status:** `review`
+- **Owner:** /root
 - **Reviewer:** unassigned
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
@@ -206,25 +206,37 @@ cards.
 
 ### Acceptance checklist
 
-- [ ] CI triggers for pull requests and the default branch.
-- [ ] CI installs the declared locked environment and invokes the same commands
+- [x] CI triggers for pull requests and the default branch.
+- [x] CI installs the declared locked environment and invokes the same commands
       developers use locally.
-- [ ] Formatting, linting, typing, deterministic tests, documentation links,
+- [x] Formatting, linting, typing, deterministic tests, documentation links,
       and secret scanning fail the workflow when they fail locally.
-- [ ] Jobs have bounded timeouts and least-privilege permissions.
-- [ ] No live network source, model, database, or secret is required after
+- [x] Jobs have bounded timeouts and least-privilege permissions.
+- [x] No live network source, model, database, or secret is required after
       dependency installation.
-- [ ] The workflow syntax is validated and the available checks pass.
-- [ ] Contributor-facing commands in `README.md` remain accurate.
+- [x] The workflow syntax is validated and the available checks pass.
+- [x] Contributor-facing commands in `README.md` remain accurate.
 
 ### Handoff
 
-- **Summary:** pending
-- **Files changed:** pending
-- **Verification and results:** pending
-- **Decisions/assumptions:** pending
+- **Summary:** Added a least-privilege GitHub Actions quality workflow and
+  deterministic local documentation-link and basic secret checks it invokes.
+- **Files changed:** `.github/workflows/ci.yml`, `scripts/check_docs_links.py`,
+  `tests/test_quality_scripts.py`, `Makefile`, `README.md`, `CHANGELOG.md`,
+  `docs/development/task-history.md`, and this queue.
+- **Verification and results:** `make quality` passed (Ruff format and lint,
+  strict mypy, and 2 pytest tests); `make docs`, `make precommit`, and `git
+  diff --check` passed. Staged pre-commit checks validate the workflow YAML.
+  `actionlint` is not installed locally; Gitleaks runs when CI is triggered.
+- **Decisions/assumptions:** CI runs on all branch pushes and pull requests
+  because the repository's remote default branch is not discoverable locally;
+  this necessarily includes the GitHub default branch. The workflow uses
+  `contents: read`, a ten-minute timeout, a locked `uv` environment, and no
+  service or provider calls after dependency installation. Gitleaks uses an
+  immutable v3 action pin and scans repository history in a separate CI job.
 - **Risks or blockers:** none recorded
-- **Follow-ups (not started):** pending
+- **Follow-ups (not started):** CI execution on GitHub is pending the next push;
+  do not add deployment or live-service jobs in this card.
 
 ---
 

@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test test-integration docs precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
+.PHONY: format lint typecheck test test-integration docs openapi openapi-check run precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
 
 format:
 	uv run ruff format --check .
@@ -17,6 +17,15 @@ test-integration:
 
 docs:
 	uv run python scripts/check_docs_links.py
+
+openapi:
+	uv run python scripts/export_openapi.py
+
+openapi-check:
+	uv run python scripts/export_openapi.py --check
+
+run:
+	set -a; . ./.env; set +a; uv run uvicorn --factory contour.bootstrap:create_app_from_environment --host 127.0.0.1 --port 8000
 
 precommit:
 	uv run pre-commit run --all-files
@@ -42,4 +51,4 @@ migrate:
 migration-current:
 	uv run alembic current
 
-quality: format lint typecheck test
+quality: format lint typecheck test openapi-check

@@ -31,3 +31,5 @@ date without rewriting what was actually delivered.
 - Explicit backend composition-root, router/controller, Pydantic API-schema,
   application-service, adapter, package-namespace, and proportional-testing
   boundaries, with enforced Google-style production docstrings.
+- Generated frontend-consumable OpenAPI artifact with deterministic drift
+  verification in the backend quality floor.

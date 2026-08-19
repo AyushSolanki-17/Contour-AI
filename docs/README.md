@@ -10,6 +10,9 @@ This directory contains the context needed to build and maintain the Contour bac
 4. [Development roadmap](development/roadmap.md) — ordered backend work and acceptance gates.
 5. [Testing standard](quality/testing.md) — verification layers and definition of done.
 
+For HTTP-facing changes, also read
+[API contract synchronization](development/api-contracts.md).
+
 Repository-wide instructions for coding agents live in [AGENTS.md](../AGENTS.md).
 
 ## Executing the roadmap

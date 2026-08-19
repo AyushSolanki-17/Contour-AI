@@ -61,14 +61,33 @@ slice.
 - Keep vendor-specific and future technology choices behind behavior-focused ports.
 - Do not introduce microservices, Kafka, Neo4j, a dedicated vector store, Redis, a warehouse, Rust, or agent frameworks during Phase 0 without an approved scope change and admission evidence.
 
+## API contract synchronization
+
+- FastAPI routes and public Pydantic schemas own HTTP behavior. Generate the
+  frontend-consumable artifact at `openapi/contour.openapi.json`; never edit the
+  generated JSON by hand.
+- Run `make openapi` after an intentional route or public-schema change and
+  `make openapi-check` before handoff. The default quality floor rejects drift
+  between application code and the checked-in artifact.
+- Treat the artifact as a public wire contract. Prefer additive changes;
+  coordinate breaking paths, fields, status codes, error envelopes,
+  authentication, pagination, idempotency, or progress semantics with frontend
+  and integration tasks.
+- Do not import frontend types or copy private parent-workspace planning into
+  this repository. Frontends consume the generated contract without importing
+  Python internals.
+
 ## Implementation discipline
 
 - Work in small vertical increments that leave a runnable, tested contract.
 - Prefer deterministic behavior and the simplest implementation that satisfies the current requirement.
-- Organize handwritten modules by a cohesive responsibility, not a generic noun
-  such as `models` or `utils`. A small set of classes may share a module only
-  when they change together and form one clear concept; split unrelated records,
-  services, or state machines into capability-focused modules.
+- Put each new top-level production class in its own capability-named Python
+  file.
+  Keep package-wide constants, type aliases, and validation helpers in one
+  clearly named shared module within that package; do not scatter them across
+  individual class modules or create generic `models` or `utils` catch-alls.
+  Existing multi-class modules can be split when they are next materially
+  changed; do not churn stable code solely to satisfy this convention.
 - Treat roughly 400 lines as a review prompt for a handwritten production Python
   module. Split by responsibility when doing so makes the code easier to follow;
   generated code, migrations, and fixture data are assessed by their own needs.

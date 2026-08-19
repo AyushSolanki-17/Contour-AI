@@ -108,3 +108,88 @@ class SourceVersionId:
     def __str__(self) -> str:
         """Return a source-qualified immutable version key."""
         return f"{self.source_id}@{self.content_digest}"
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceId:
+    """A stable identifier for one isolated Contour workspace."""
+
+    namespace: str
+    value: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed workspace identity components."""
+        object.__setattr__(self, "namespace", _require_namespace(self.namespace))
+        object.__setattr__(self, "value", _require_local_value(self.value, field_name="value"))
+
+    def __str__(self) -> str:
+        """Return the stable serialized workspace identifier."""
+        return f"{self.namespace}:{self.value}"
+
+
+@dataclass(frozen=True, slots=True)
+class EntityId:
+    """A namespaced identity for one knowledge-model entity."""
+
+    namespace: str
+    value: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed entity identity components."""
+        object.__setattr__(self, "namespace", _require_namespace(self.namespace))
+        object.__setattr__(self, "value", _require_local_value(self.value, field_name="value"))
+
+    def __str__(self) -> str:
+        """Return the stable serialized entity identifier."""
+        return f"{self.namespace}:{self.value}"
+
+
+@dataclass(frozen=True, slots=True)
+class RelationshipId:
+    """A stable identifier for one evidence-backed relationship assertion."""
+
+    namespace: str
+    value: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed relationship identity components."""
+        object.__setattr__(self, "namespace", _require_namespace(self.namespace))
+        object.__setattr__(self, "value", _require_local_value(self.value, field_name="value"))
+
+    def __str__(self) -> str:
+        """Return the stable serialized relationship identifier."""
+        return f"{self.namespace}:{self.value}"
+
+
+@dataclass(frozen=True, slots=True)
+class JobId:
+    """A stable identifier for one requested unit of work."""
+
+    namespace: str
+    value: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed job identity components."""
+        object.__setattr__(self, "namespace", _require_namespace(self.namespace))
+        object.__setattr__(self, "value", _require_local_value(self.value, field_name="value"))
+
+    def __str__(self) -> str:
+        """Return the stable serialized job identifier."""
+        return f"{self.namespace}:{self.value}"
+
+
+@dataclass(frozen=True, slots=True)
+class RunId:
+    """A stable identifier for one execution attempt of a requested job."""
+
+    namespace: str
+    value: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed run identity components."""
+        object.__setattr__(self, "namespace", _require_namespace(self.namespace))
+        object.__setattr__(self, "value", _require_local_value(self.value, field_name="value"))
+
+    def __str__(self) -> str:
+        """Return the stable serialized run identifier."""
+        return f"{self.namespace}:{self.value}"

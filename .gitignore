@@ -1,4 +1,29 @@
-.agents/
+# Keep local agent state private while allowing shared, portable skills.
+/.agents/*
+!/.agents/skills/
+!/.agents/skills/**
 /contour-research
-/docs
 .DS_Store
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+/.venv/
+/venv/
+.env
+.env.*
+!.env.example
+
+# Private planning and research belong in ../docs, outside this repository.
+/docs/internal/
+/docs/research/
+/docs/strategy/

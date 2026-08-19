@@ -1,0 +1,318 @@
+# Contour Active Work
+
+**Status:** active execution queue
+**Updated:** 2026-08-19
+**Queue limit:** at most six tasks not marked `done`
+
+This file is the small, reviewable working set for humans and coding agents. It
+turns the ordered [backend roadmap](docs/development/roadmap.md) into bounded
+implementation cards without making this file a second product backlog.
+
+The current cards were promoted from the current Phase 0 planning material on
+2026-08-19. They contain all context needed to execute these tasks. The parent
+planning directory remains private intake material and does not need to be
+re-read for work listed here. Frontend tasks from the cross-repository plan were
+intentionally excluded because this repository owns backend work only.
+
+## Sources of truth
+
+Use this precedence when instructions disagree:
+
+1. an explicit current user instruction;
+2. [AGENTS.md](AGENTS.md) and the controlling engineering documents;
+3. the ordered [backend roadmap](docs/development/roadmap.md); and
+4. this queue, which controls only the currently approved execution slice.
+
+Do not copy private research, strategy, or raw planning notes into a task card.
+A card may narrow a roadmap item, but it may not silently expand or reorder it.
+
+## Operating rules
+
+1. A human or coordinating agent keeps no more than six cards not marked `done`
+   here and promotes work only from the earliest incomplete roadmap step unless
+   the user explicitly changes priority.
+2. Before editing implementation files, an agent claims one `ready` card by
+   setting its status to `in_progress`, its owner to a stable human or agent
+   name, and its `Updated` date. The queue row and card fields must agree. An
+   agent owns at most one active card.
+3. `queued` means that a card is shaped but its dependencies are not complete.
+   `blocked` is reserved for an attempted task that cannot progress. Record the
+   concrete blocker and evidence instead of repeatedly retrying it.
+4. Work stops at the card's scope and acceptance criteria. Record useful new
+   ideas under `Follow-ups`; do not implement them, create more cards, or start
+   the next task without an explicit coordinator or user decision.
+5. When the acceptance checks pass, fill in every handoff field, set the card to
+   `review`, and stop. A human or explicitly assigned reviewer either marks it
+   `done` or returns it to `ready` with a specific unmet criterion. Reviews do
+   not begin open-ended improvement cycles.
+6. On approval, the reviewer adds a concise entry to
+   [the completed-task log](docs/development/task-history.md). Completed cards
+   may then be removed when the queue is refilled.
+7. Update documentation in the same task when behavior or a contract changes.
+   Update [README.md](README.md) when setup, usage, or public entry points
+   change, and add notable behavior to [CHANGELOG.md](CHANGELOG.md) under
+   `Unreleased`. The changelog is not a commit log or a substitute for the task
+   history.
+
+## Status vocabulary
+
+| Status | Meaning | Who moves it next |
+|---|---|---|
+| `queued` | Defined, but waiting on listed dependencies | Coordinator after dependencies complete |
+| `ready` | May be claimed now | Implementer |
+| `in_progress` | Claimed by exactly one owner | Implementer |
+| `review` | Acceptance evidence and handoff are ready | Reviewer |
+| `blocked` | Attempted and stopped by a recorded condition | Coordinator or user |
+| `done` | Independently accepted | Coordinator during archival/refill |
+
+## Queue
+
+| Order | Task | Status | Depends on | Owner |
+|---:|---|---|---|---|
+| 1 | `P0-01` — Python project and local quality foundation | `done` | — | /root |
+| 2 | `P0-02` — Local PostgreSQL development runtime | `ready` | — | unassigned |
+| 3 | `P0-03` — Continuous-integration quality gate | `queued` | `P0-01` | unassigned |
+| 4 | `P0-04` — Settings, errors, logging, and health contracts | `queued` | `P0-01`, `P0-02` | unassigned |
+| 5 | `P0-05` — Migration baseline and clean-database test | `queued` | `P0-01`, `P0-02` | unassigned |
+
+`P0-01` and `P0-02` have disjoint intended scopes and may be assigned in
+parallel. Before later tasks are assigned concurrently, the coordinator should
+check their expected files and record any ownership split in the affected
+cards.
+
+---
+
+## P0-01 — Python project and local quality foundation
+
+- **Status:** `done`
+- **Owner:** /root
+- **Reviewer:** user
+- **Updated:** 2026-08-19
+- **Roadmap:** Phase 0.1 — repository and runtime foundation
+- **Outcome:** A clean checkout has one installable Python project and one
+  documented local command surface for formatting, linting, typing, and tests.
+- **Scope:** Python version declaration; `src` package skeleton; project and
+  development dependencies; reproducible dependency lock; minimal deterministic
+  test; local quality commands.
+- **Non-goals:** API behavior, domain models, PostgreSQL, migrations, provider
+  SDKs, deployment, and speculative package abstractions.
+- **Dependencies:** none.
+
+### Acceptance checklist
+
+- [x] The supported Python version and dependency workflow are explicit.
+- [x] A clean environment can install from the committed project definition and
+      lock without resolving unpinned transitive versions.
+- [x] The package imports from the `src` layout without path manipulation.
+- [x] One documented command surface runs formatting checks, linting, static
+      typing, and deterministic tests.
+- [x] The initial tests prove the package and toolchain work without network or
+      service dependencies.
+- [x] `README.md` contains only setup and verification commands that were run
+      successfully.
+- [x] `CHANGELOG.md` records the new developer-facing foundation.
+
+### Handoff
+
+- **Summary:** Added the installable Python 3.14 `contour` package, committed
+  dependency lock, deterministic quality command surface, and pre-commit
+  checks for formatting, linting, unsafe files, and common repository mistakes.
+- **Files changed:** `pyproject.toml`, `uv.lock`, `Makefile`,
+  `src/contour/__init__.py`, `tests/test_package.py`, `.gitignore`, `README.md`,
+  `CHANGELOG.md`, `AGENTS.md`, `.pre-commit-config.yaml`, and this queue.
+- **Verification and results:** `uv sync --locked --group dev && make quality`
+  passed (Ruff format and lint, strict mypy, and 1 pytest); `make precommit`,
+  `uv lock --check`, and `git diff --check` passed. `make hooks` installed the
+  pre-commit hook.
+- **Decisions/assumptions:** Python 3.14 is the sole supported runtime because
+  the supplied environment is 3.14.4. `uv` is the dependency workflow, and the
+  full lock (including hashes) is committed.
+- **Risks or blockers:** none recorded
+- **Follow-ups (not started):** none.
+
+---
+
+## P0-02 — Local PostgreSQL development runtime
+
+- **Status:** `ready`
+- **Owner:** unassigned
+- **Reviewer:** unassigned
+- **Updated:** 2026-08-19
+- **Roadmap:** Phase 0.1 — repository and runtime foundation
+- **Outcome:** A developer can start and stop the declared PostgreSQL version
+  locally with repeatable, non-secret configuration and a meaningful readiness
+  check.
+- **Scope:** Local container/service definition; pinned PostgreSQL version;
+  development-only credentials through ignored or example configuration;
+  durable local volume; health/readiness probe; operating documentation.
+- **Non-goals:** Application repositories, schema design, migrations, production
+  deployment, high availability, backups, or hosted credentials.
+- **Dependencies:** none. Coordinate public environment-variable names with
+  `P0-04`; do not implement Python settings in this card.
+
+### Acceptance checklist
+
+- [ ] The PostgreSQL image or package version is pinned explicitly.
+- [ ] Tracked files contain no real credentials, and the local credential flow
+      is documented.
+- [ ] Start, readiness, connection, stop, and clean-reset commands are
+      documented and were exercised.
+- [ ] Normal stop/start preserves local data; clean reset is an explicit,
+      separately documented destructive action.
+- [ ] Configuration is narrow enough for local development and does not imply a
+      production deployment contract.
+- [ ] `README.md` links to the working local database instructions.
+- [ ] `CHANGELOG.md` records the new developer-facing runtime.
+
+### Handoff
+
+- **Summary:** pending
+- **Files changed:** pending
+- **Verification and results:** pending
+- **Decisions/assumptions:** pending
+- **Risks or blockers:** none recorded
+- **Follow-ups (not started):** pending
+
+---
+
+## P0-03 — Continuous-integration quality gate
+
+- **Status:** `queued`
+- **Owner:** unassigned
+- **Reviewer:** unassigned
+- **Updated:** 2026-08-19
+- **Roadmap:** Phase 0.1 — repository and runtime foundation
+- **Outcome:** Pull requests and the default branch run the same deterministic
+  quality checks documented for local development.
+- **Scope:** CI workflow; locked environment installation; format, lint, type,
+  and unit-test gates; documentation-link validation; basic secret scanning;
+  dependency caching only when it does not weaken lock enforcement.
+- **Non-goals:** deployment, release automation, live-service tests, provider
+  calls, broad platform matrices, and checks for capabilities not implemented
+  yet.
+- **Dependencies:** `P0-01` accepted.
+
+### Acceptance checklist
+
+- [ ] CI triggers for pull requests and the default branch.
+- [ ] CI installs the declared locked environment and invokes the same commands
+      developers use locally.
+- [ ] Formatting, linting, typing, deterministic tests, documentation links,
+      and secret scanning fail the workflow when they fail locally.
+- [ ] Jobs have bounded timeouts and least-privilege permissions.
+- [ ] No live network source, model, database, or secret is required after
+      dependency installation.
+- [ ] The workflow syntax is validated and the available checks pass.
+- [ ] Contributor-facing commands in `README.md` remain accurate.
+
+### Handoff
+
+- **Summary:** pending
+- **Files changed:** pending
+- **Verification and results:** pending
+- **Decisions/assumptions:** pending
+- **Risks or blockers:** none recorded
+- **Follow-ups (not started):** pending
+
+---
+
+## P0-04 — Settings, errors, logging, and health contracts
+
+- **Status:** `queued`
+- **Owner:** unassigned
+- **Reviewer:** unassigned
+- **Updated:** 2026-08-19
+- **Roadmap:** Phase 0.1 — repository and runtime foundation
+- **Outcome:** The backend starts with validated configuration, exposes distinct
+  liveness and readiness behavior, and reports structured, redacted failures.
+- **Scope:** Typed settings boundary; environment parsing; structured application
+  errors; logging configuration and secret redaction; minimal FastAPI entry
+  point; liveness and database-aware readiness contracts; focused tests.
+- **Non-goals:** business routes, authentication, domain models, repository
+  implementation, tracing backend, or production observability stack.
+- **Dependencies:** `P0-01` and `P0-02` accepted.
+
+### Acceptance checklist
+
+- [ ] Missing or invalid required configuration fails clearly without fabricated
+      defaults.
+- [ ] Secrets are accepted by reference/environment and are absent from error,
+      representation, and log output tests.
+- [ ] Application errors have a stable internal shape independent of FastAPI;
+      HTTP translation remains in the API layer.
+- [ ] Liveness proves the process can respond; readiness fails when required
+      dependencies are unavailable and does not report an empty success.
+- [ ] Package dependency direction follows the backend architecture.
+- [ ] Tests cover valid configuration, invalid configuration, redaction,
+      liveness, readiness success, and readiness failure.
+- [ ] Startup and health usage are documented and recorded in `CHANGELOG.md`.
+
+### Handoff
+
+- **Summary:** pending
+- **Files changed:** pending
+- **Verification and results:** pending
+- **Decisions/assumptions:** pending
+- **Risks or blockers:** none recorded
+- **Follow-ups (not started):** pending
+
+---
+
+## P0-05 — Migration baseline and clean-database test
+
+- **Status:** `queued`
+- **Owner:** unassigned
+- **Reviewer:** unassigned
+- **Updated:** 2026-08-19
+- **Roadmap:** Phase 0.1 — repository and runtime foundation
+- **Outcome:** An empty supported PostgreSQL instance can reach the current
+  schema revision repeatably, and the migration path has an automated test.
+- **Scope:** Migration tool configuration; baseline revision containing only
+  infrastructure needed by the migration system; upgrade/current checks;
+  repeatability and clean-database integration test; recovery documentation.
+- **Non-goals:** Phase 0.2 domain tables, speculative schemas, production
+  migration orchestration, or destructive automatic downgrade.
+- **Dependencies:** `P0-01` and `P0-02` accepted.
+
+### Acceptance checklist
+
+- [ ] Migration configuration uses the public database configuration contract
+      without committing credentials.
+- [ ] Applying all migrations to an empty supported PostgreSQL database succeeds
+      and reports the expected current revision.
+- [ ] Re-running the upgrade is safe and leaves the database at the same
+      revision.
+- [ ] A deterministic integration test creates an isolated empty database,
+      migrates it, verifies revision state, and cleans up on success or failure.
+- [ ] Failure and recovery instructions are documented; destructive reset is
+      never implicit in ordinary startup.
+- [ ] Default unit tests remain service-free, while the integration test is
+      clearly selectable.
+- [ ] Migration commands and the developer-facing capability are reflected in
+      `README.md` and `CHANGELOG.md`.
+
+### Handoff
+
+- **Summary:** pending
+- **Files changed:** pending
+- **Verification and results:** pending
+- **Decisions/assumptions:** pending
+- **Risks or blockers:** none recorded
+- **Follow-ups (not started):** pending
+
+## Queue refill checklist
+
+The reviewer or coordinator runs this only after accepting or explicitly
+reordering work:
+
+- [ ] Record each accepted card in
+      [the completed-task log](docs/development/task-history.md).
+- [ ] Re-evaluate dependencies and move newly unblocked cards to `ready`.
+- [ ] Remove archived `done` cards while preserving at most six cards not marked
+      `done`.
+- [ ] Promote only the next smallest backend slice from the controlling roadmap.
+- [ ] Give every promoted card an outcome, non-goals, dependencies, objective
+      acceptance checks, and a blank handoff.
+- [ ] Check planned versus implemented wording in documentation.
+- [ ] Confirm `README.md` and `CHANGELOG.md` match the accepted behavior.
+- [ ] Assign agents only after checking likely file overlap.

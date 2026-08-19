@@ -194,8 +194,8 @@ cards.
 - **Reviewer:** unassigned
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
-- **Outcome:** Pull requests and the default branch run the same deterministic
-  quality checks documented for local development.
+- **Outcome:** Pull requests run the same deterministic quality checks
+  documented for local development before they can merge.
 - **Scope:** CI workflow; locked environment installation; format, lint, type,
   and unit-test gates; documentation-link validation; basic secret scanning;
   dependency caching only when it does not weaken lock enforcement.
@@ -206,7 +206,7 @@ cards.
 
 ### Acceptance checklist
 
-- [x] CI triggers for pull requests and the default branch.
+- [x] CI triggers for pull requests.
 - [x] CI installs the declared locked environment and invokes the same commands
       developers use locally.
 - [x] Formatting, linting, typing, deterministic tests, documentation links,
@@ -228,17 +228,18 @@ cards.
   strict mypy, and 2 pytest tests); `make docs`, `make precommit`, and `git
   diff --check` passed. Staged pre-commit checks validate the workflow YAML.
   `actionlint` is not installed locally; Gitleaks runs when CI is triggered.
-- **Decisions/assumptions:** CI runs on all branch pushes and pull requests
-  because the repository's remote default branch is not discoverable locally;
-  this necessarily includes the GitHub default branch. The workflow uses only
-  `contents: read` and `pull-requests: read`, a ten-minute timeout, a locked
-  `uv` environment, and no service or provider calls after dependency
-  installation. Gitleaks uses an immutable v3 action pin and scans repository
-  history in a separate CI job; its PR commit lookup requires the narrow
-  pull-request read permission.
+- **Decisions/assumptions:** CI runs only for pull requests to avoid duplicate
+  branch-push runs. The default branch must require the `quality` and
+  `secret-scan` checks before merging; direct pushes are outside this workflow's
+  protection model. The workflow uses only `contents: read` and
+  `pull-requests: read`, a ten-minute timeout, a locked `uv` environment, and
+  no service or provider calls after dependency installation. Gitleaks uses an
+  immutable v3 action pin and scans repository history in a separate CI job;
+  its PR commit lookup requires the narrow pull-request read permission.
 - **Risks or blockers:** none recorded
-- **Follow-ups (not started):** CI execution on GitHub is pending the next push;
-  do not add deployment or live-service jobs in this card.
+- **Follow-ups (not started):** Configure default-branch protection to require
+  the `quality` and `secret-scan` checks; do not add deployment or live-service
+  jobs in this card.
 
 ---
 

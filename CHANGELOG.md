@@ -24,3 +24,8 @@ date without rewriting what was actually delivered.
 - Validated PostgreSQL runtime settings, redacted application logging, and a
   minimal FastAPI health contract with separate liveness and database-aware
   readiness endpoints.
+- Alembic migration baseline, repeatable local migration commands, and an
+  explicitly selected clean-database PostgreSQL integration test.
+- Explicit backend composition-root, router/controller, Pydantic API-schema,
+  application-service, adapter, package-namespace, and proportional-testing
+  boundaries, with enforced Google-style production docstrings.

@@ -28,7 +28,11 @@ class DatabaseSettings:
 
     @property
     def dsn(self) -> str:
-        """Return the database DSN only for infrastructure adapters."""
+        """Build the encoded database DSN for infrastructure adapters.
+
+        Returns:
+            A PostgreSQL connection string containing the configured credentials.
+        """
         username = quote(self.username, safe="")
         password = quote(self.password, safe="")
         database = quote(self.database, safe="")
@@ -36,6 +40,11 @@ class DatabaseSettings:
 
     @property
     def redaction_values(self) -> tuple[str, ...]:
+        """Return sensitive values that logging must redact.
+
+        Returns:
+            The raw password and complete DSN.
+        """
         return (self.password, self.dsn)
 
 
@@ -47,7 +56,17 @@ class Settings:
 
     @classmethod
     def from_environment(cls, environment: dict[str, str] | None = None) -> Settings:
-        """Load and validate required configuration without implicit fallbacks."""
+        """Load and validate required configuration without implicit fallbacks.
+
+        Args:
+            environment: Optional environment mapping used instead of ``os.environ``.
+
+        Returns:
+            Validated runtime settings.
+
+        Raises:
+            ConfigurationError: If a required value is missing or invalid.
+        """
         values = os.environ if environment is None else environment
         missing = [name for name in _REQUIRED_DATABASE_VARIABLES if not values.get(name)]
         if missing:

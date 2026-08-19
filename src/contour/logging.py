@@ -11,15 +11,36 @@ class SecretRedactionFilter(logging.Filter):
     """Replace configured secret values in log messages and arguments."""
 
     def __init__(self, secrets: Iterable[str]) -> None:
+        """Initialize the filter with non-empty sensitive values.
+
+        Args:
+            secrets: Exact values to replace before a record is emitted.
+        """
         super().__init__()
         self._secrets = tuple(secret for secret in secrets if secret)
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Redact a log record while allowing it to be emitted.
+
+        Args:
+            record: Mutable log record to sanitize.
+
+        Returns:
+            Always true so the sanitized record continues to its handler.
+        """
         record.msg = self._redact(record.msg)
         record.args = self._redact(record.args)
         return True
 
     def _redact(self, value: Any) -> Any:
+        """Recursively replace configured secrets in supported log values.
+
+        Args:
+            value: Message, arguments, or nested container to sanitize.
+
+        Returns:
+            A redacted value that preserves the supported container shape.
+        """
         if isinstance(value, str):
             redacted = value
             for secret in self._secrets:
@@ -33,7 +54,11 @@ class SecretRedactionFilter(logging.Filter):
 
 
 def configure_logging(*, secrets: Iterable[str]) -> None:
-    """Configure Contour's root logger without emitting settings or secrets."""
+    """Configure Contour's logger without emitting settings or secrets.
+
+    Args:
+        secrets: Exact sensitive values to redact from log records.
+    """
     handler = logging.StreamHandler()
     handler.addFilter(SecretRedactionFilter(secrets))
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))

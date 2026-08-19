@@ -65,6 +65,13 @@ slice.
 
 - Work in small vertical increments that leave a runnable, tested contract.
 - Prefer deterministic behavior and the simplest implementation that satisfies the current requirement.
+- Give every production function, method, and API endpoint a concise
+  Google-style docstring that explains its contract rather than restating its
+  name. Document arguments, returns, and raised errors when they are meaningful.
+- Use inline comments only for non-obvious intent, constraints, or tradeoffs.
+  For a genuinely complex multi-stage algorithm, label the major flow as
+  `Step 1`, `Step 2`, and nested stages as `Step 2.A`, `Step 2.B`; do not
+  narrate straightforward statements.
 - Make retries and duplicate requests explicit and idempotent where required.
 - Fail unsupported or invalid states clearly; never fabricate defaults or convert failures into empty success.
 - Add migrations for schema changes and tests for migration and persistence invariants.
@@ -72,13 +79,24 @@ slice.
 
 ## Verification
 
-Follow `docs/quality/testing.md`. Every bug fix needs a regression test. Knowledge-affecting changes require direct invariant and quality checks in addition to ordinary software tests. Live networks and models stay out of default test suites.
+Follow `docs/quality/testing.md`. Every permanent test must protect a named
+contract, invariant, failure mode, security property, or confirmed regression;
+do not create tests per file/class or duplicate the same behavior across layers.
+Every bug fix needs the smallest useful regression test. Knowledge-affecting
+changes require direct invariant and quality checks in addition to ordinary
+software tests. Live networks and models stay out of default test suites.
 
 Before handing work back, run the relevant formatting, linting, typing, tests, migration checks, and documentation/link checks available in the repository. State what was run and any checks that could not run.
 
 ## Documentation
 
 Update docs when a contract or accepted architecture changes. Mark planned and implemented behavior accurately. Architecture decisions that add dependencies or alter boundaries must include the requirement, simpler alternative, failure/security implications, migration or removal path, and verification evidence.
+
+Integrate new guidance into the existing section that owns the subject. Create
+a nearby named section only when no suitable section exists; do not append
+miscellaneous notes to the top or bottom of a document. Preserve each file's
+role, hierarchy, chronology, and source-of-truth status, and link to controlling
+guidance instead of duplicating it across files.
 
 Keep public entry points and setup instructions in `README.md` accurate. Record
 notable behavior under `Unreleased` in `CHANGELOG.md`; do not use the changelog

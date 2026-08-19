@@ -73,7 +73,7 @@ A card may narrow a roadmap item, but it may not silently expand or reorder it.
 | 2 | `P0-02` — Local PostgreSQL development runtime | `done` | — | /root |
 | 3 | `P0-03` — Continuous-integration quality gate | `review` | `P0-01` | /root |
 | 4 | `P0-04` — Settings, errors, logging, and health contracts | `review` | `P0-01`, `P0-02` | /root |
-| 5 | `P0-05` — Migration baseline and clean-database test | `queued` | `P0-01`, `P0-02` | unassigned |
+| 5 | `P0-05` — Migration baseline and clean-database test | `review` | `P0-01`, `P0-02` | /root |
 
 `P0-01` and `P0-02` have disjoint intended scopes and may be assigned in
 parallel. Before later tasks are assigned concurrently, the coordinator should
@@ -301,8 +301,8 @@ cards.
 
 ## P0-05 — Migration baseline and clean-database test
 
-- **Status:** `queued`
-- **Owner:** unassigned
+- **Status:** `review`
+- **Owner:** /root
 - **Reviewer:** unassigned
 - **Updated:** 2026-08-19
 - **Roadmap:** Phase 0.1 — repository and runtime foundation
@@ -317,29 +317,45 @@ cards.
 
 ### Acceptance checklist
 
-- [ ] Migration configuration uses the public database configuration contract
+- [x] Migration configuration uses the public database configuration contract
       without committing credentials.
-- [ ] Applying all migrations to an empty supported PostgreSQL database succeeds
+- [x] Applying all migrations to an empty supported PostgreSQL database succeeds
       and reports the expected current revision.
-- [ ] Re-running the upgrade is safe and leaves the database at the same
+- [x] Re-running the upgrade is safe and leaves the database at the same
       revision.
-- [ ] A deterministic integration test creates an isolated empty database,
+- [x] A deterministic integration test creates an isolated empty database,
       migrates it, verifies revision state, and cleans up on success or failure.
-- [ ] Failure and recovery instructions are documented; destructive reset is
+- [x] Failure and recovery instructions are documented; destructive reset is
       never implicit in ordinary startup.
-- [ ] Default unit tests remain service-free, while the integration test is
+- [x] Default unit tests remain service-free, while the integration test is
       clearly selectable.
-- [ ] Migration commands and the developer-facing capability are reflected in
+- [x] Migration commands and the developer-facing capability are reflected in
       `README.md` and `CHANGELOG.md`.
 
 ### Handoff
 
-- **Summary:** pending
-- **Files changed:** pending
-- **Verification and results:** pending
-- **Decisions/assumptions:** pending
+- **Summary:** Added an Alembic baseline revision and commands for repeatable
+  local upgrades/current-revision inspection. Added an opt-in PostgreSQL
+  integration test that creates, migrates, checks, and drops an isolated
+  database.
+- **Files changed:** `pyproject.toml`, `uv.lock`, `alembic.ini`, `migrations/`,
+  `tests/conftest.py`, `tests/test_migrations_integration.py`, `Makefile`,
+  `README.md`, `docs/development/local-postgresql.md`, `CHANGELOG.md`, and this
+  queue.
+- **Verification and results:** `make quality` passed (12 tests passed, 1
+  intentionally skipped); `make docs`, `uv lock --check`, and `git diff --check`
+  passed. With the local Compose PostgreSQL runtime, `make migrate`,
+  `make migration-current`, a repeated `make migrate`, and `make
+  test-integration` passed (13 tests), reporting revision `20260819_01`.
+- **Decisions/assumptions:** The initial revision intentionally has no domain
+  tables and records only migration state. Alembic reads the existing validated
+  PostgreSQL environment contract through `Settings`; the integration test is
+  opt-in and requires a local PostgreSQL user allowed to create/drop its
+  isolated test database.
 - **Risks or blockers:** none recorded
-- **Follow-ups (not started):** pending
+- **Follow-ups (not started):** First application/domain tables remain Phase
+  0.2 work; production migration orchestration and downgrade policy remain out
+  of scope.
 
 ## Queue refill checklist
 

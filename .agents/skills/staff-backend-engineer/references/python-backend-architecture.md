@@ -37,6 +37,43 @@ created for hypothetical needs. A cohesive small use case can remain one
 module; split it when commands, queries, ports, policies, or tests have distinct
 reasons to change.
 
+A practical modular-monolith layout can group by boundary first and capability
+inside it:
+
+```text
+product/
+  domain/
+  application/<capability>/
+  adapters/<technology>/<capability>/
+  api/
+  worker/
+  bootstrap/<executable>.py
+```
+
+This is a dependency map, not a requirement to create empty directories. Keep
+consumer-owned ports with the application capability, concrete queries and row
+mapping with the technology adapter, and executable resource construction in a
+composition root.
+
+A conventional layer-named layout is equally valid when it makes navigation
+clearer to the team:
+
+```text
+product/
+  api/
+  services/                    application use cases by capability
+  domain/
+  repositories/                capability-specific ports only
+  infrastructure/<technology>/ concrete implementations and mappings
+  bootstrap/
+```
+
+In this shape, `services/` must not contain database queries,
+`repositories/` must not contain generic CRUD hierarchies or concrete driver
+code, and `infrastructure/` must not own domain rules. Choose one vocabulary and
+enforce its dependency direction; do not maintain parallel `application` and
+`services` or `adapters` and `infrastructure` trees.
+
 ## Package and distribution boundary
 
 For one product and deployment unit, prefer one top-level import namespace under
@@ -70,6 +107,20 @@ Keep SQL, ORM query types, eager-loading strategy, and row mapping inside the
 persistence adapter. Make query count and atomicity explicit for important use
 cases.
 
+Repository ports may live beside a capability service or in a top-level
+`repositories/` package. A top-level package improves conventional navigation
+when it contains only capability-specific interfaces and depends inward on
+domain types; concrete PostgreSQL or provider repositories still belong under
+`infrastructure/` or the repository's equivalent adapter boundary.
+
+Use the repository's established parameter-binding query API for ordinary
+queries. Raw SQL is not inherently unsafe, and an ORM is not inherently safer:
+the security boundary is trusted statement structure, bound values, and
+whitelisted dynamic identifiers. Prefer a Core/query-builder API when it keeps
+schema vocabulary consistent without coupling domain objects to persistence.
+Use handwritten SQL for database-specific behavior or measured performance only
+when the adapter documents the reason and verifies the relevant boundary.
+
 Use a unit-of-work or transaction port when one use case must atomically change
 multiple repositories. The application layer decides the transaction boundary;
 the adapter owns driver-specific commit, rollback, isolation, and cleanup.
@@ -91,6 +142,35 @@ Translate explicitly where semantics or trust changes. Sharing a small immutable
 value object is appropriate only when its meaning and constraints are genuinely
 identical. Do not make domain objects inherit Pydantic or ORM base classes for
 serialization convenience.
+
+## Database schema evolution
+
+Treat runtime schema declarations and migration history as related but distinct
+artifacts. SQLAlchemy tables or ORM mappings describe the schema expected by the
+current code and may be used as Alembic autogeneration input. Versioned Alembic
+revisions own how an existing durable database reaches that schema. The
+application process does not infer or apply that transformation on startup.
+
+A safe default workflow is:
+
+```text
+change reviewed schema metadata
+  -> generate or author a candidate revision
+  -> review and correct the revision
+  -> migrate and compare an isolated real database
+  -> commit code and revision together
+  -> apply the revision as an explicit release operation
+  -> start code that requires the new schema
+```
+
+Autogeneration cannot reliably infer renames, intent, data backfills, every
+database-specific constraint, or a safe rollout order. Review both upgrade and
+recovery behavior, and use expand/backfill/verify/contract changes when multiple
+application versions may run against one database. Never call `create_all()`,
+`drop_all()`, or an equivalent schema synchronizer from an application lifespan,
+worker boot path, import side effect, or dependency constructor. Disposable test
+setup may use those helpers deliberately, but migration integration tests should
+exercise the same tracked revision chain used by releases.
 
 ## Dependency injection and resource scopes
 
@@ -121,6 +201,15 @@ conditional, or plugin-driven wiring to improve on explicit composition.
 Evaluate startup failure behavior, async cleanup, override/test ergonomics,
 typing, framework coupling, maintenance cost, and removal path. Needing one
 singleton is not sufficient evidence.
+
+Keep imports honest. Capability and executable-entrypoint facades may re-export
+stable contracts, but generic layer packages and concrete-infrastructure
+packages should not re-export implementations merely to shorten imports.
+Layer packages named `services`, `repositories`, and `infrastructure` are not
+catch-alls when their ownership is explicit and their modules are named for real
+capabilities. Avoid ambiguous modules such as `core`, `common`, `models`, and
+`utils`; name code for the concept, use case, port, or infrastructure
+responsibility that causes it to change.
 
 ## Multiple delivery adapters
 

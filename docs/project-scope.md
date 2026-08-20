@@ -29,7 +29,7 @@ create workspace
 
 This repository owns:
 
-- the Python domain and application packages;
+- the Python domain, service, repository-port, and infrastructure packages;
 - FastAPI endpoints and versioned API contracts;
 - PostgreSQL schema, migrations, repositories, and initial full-text search;
 - source adapters, ingestion, normalization, and deterministic extraction;

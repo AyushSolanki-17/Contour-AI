@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from contour.api.app import create_app
-from contour.application.health import HealthService
+from contour.services.health_service import HealthService
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "openapi" / "contour.openapi.json"

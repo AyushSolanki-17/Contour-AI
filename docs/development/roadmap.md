@@ -23,7 +23,7 @@ roadmap; completion and ordering continue to be controlled here.
 ### 0.2 — Domain and persistence foundation
 
 - implement typed identifiers and Phase 0 domain objects;
-- define repository/application ports independently of FastAPI and PostgreSQL;
+- define capability-specific repository and provider ports independently of FastAPI and PostgreSQL;
 - create initial migrations for workspaces, sources, versions, evidence, entities, relationships, jobs, and runs; and
 - enforce immutability, uniqueness, and evidence-reference invariants in both code and storage where practical.
 
@@ -48,7 +48,7 @@ roadmap; completion and ordering continue to be controlled here.
 - build PostgreSQL full-text search over admitted source content and entities; and
 - test known lookup, empty results, stale versions, and duplicate inputs.
 
-### 0.6 — Application and API contracts
+### 0.6 — Service and API contracts
 
 - implement workspace, source, ingestion, search, entity, relationship, evidence, and run services;
 - expose versioned FastAPI routes with consistent validation, errors, pagination, and idempotency;

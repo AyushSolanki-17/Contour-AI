@@ -10,6 +10,9 @@ This directory contains the context needed to build and maintain the Contour bac
 4. [Development roadmap](development/roadmap.md) — ordered backend work and acceptance gates.
 5. [Testing standard](quality/testing.md) — verification layers and definition of done.
 
+The [Contour vocabulary and data dictionary](understandings.md) defines the
+implementation terms used across those documents and includes concrete examples.
+
 For HTTP-facing changes, also read
 [API contract synchronization](development/api-contracts.md).
 

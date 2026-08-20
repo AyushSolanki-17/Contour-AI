@@ -16,10 +16,18 @@ User-interface applications and other independently deployable components live i
 
 Contour is in early development. The project scope, backend architecture, knowledge model, development roadmap, and testing standard live in the [engineering documentation](docs/README.md). API reference and operational guidance will be added alongside the code they describe.
 
+The Python package uses conventional layer names with strict ownership:
+`api/` contains FastAPI routes and Pydantic schemas, `services/` contains use
+cases, `domain/` contains business concepts, `repositories/` contains
+capability-specific persistence interfaces, and `infrastructure/` contains
+PostgreSQL and other external-system implementations. Alembic migrations remain
+separate from runtime schema declarations.
+
 ## Development status
 
-Phase 0 is active. The Python package and its local quality tooling are
-implemented; the source-to-evidence backend is not yet implemented.
+Phase 0 is active. The Python package, local quality tooling, and durable
+source catalog/evidence foundation are implemented; the complete
+source-to-evidence backend is not yet implemented.
 See the bounded [active task queue](TASKS.md) to review or assign the next work,
 and the [changelog](CHANGELOG.md) for notable delivered behavior.
 
@@ -76,7 +84,14 @@ database, apply the current schema revision with:
 ```shell
 make migrate
 make migration-current
+make migration-check
 ```
+
+Alembic revisions own durable schema evolution. SQLAlchemy metadata supports
+queries, autogeneration, and drift comparison, but API/worker startup never
+creates, drops, or automatically upgrades tables. See the
+[local PostgreSQL migration workflow](docs/development/local-postgresql.md#database-migrations)
+for authoring, review, verification, and recovery guidance.
 
 The default test suite never opens a database connection. Run the separately
 selected clean-database migration test against the disposable local development

@@ -12,6 +12,13 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Durable PostgreSQL catalog persistence for workspaces, sources, immutable
+  source versions, and exact evidence locators, including atomic admission and
+  isolated clean-database integration coverage.
+- Conventional `services`, `repositories`, and `infrastructure` packages with
+  strict dependency rules, capability-specific ports, SQLAlchemy Core PostgreSQL
+  implementations, explicit composition, pooled resources, safe persistence
+  errors, and executable architecture safeguards.
 - Framework-independent, immutable Phase 0 source/version/evidence identity
   primitives with exact locators and explicit unknown temporal values.
 - A bounded repository-native task queue with explicit ownership, acceptance,
@@ -28,6 +35,9 @@ date without rewriting what was actually delivered.
   readiness endpoints.
 - Alembic migration baseline, repeatable local migration commands, and an
   explicitly selected clean-database PostgreSQL integration test.
+- Alembic-only durable schema evolution with metadata-drift checks, an
+  application-startup guard, and isolated PostgreSQL migration verification in
+  continuous integration.
 - Explicit backend composition-root, router/controller, Pydantic API-schema,
   application-service, adapter, package-namespace, and proportional-testing
   boundaries, with enforced Google-style production docstrings.

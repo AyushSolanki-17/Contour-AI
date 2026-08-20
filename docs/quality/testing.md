@@ -1,7 +1,7 @@
 # Backend Testing Standard
 
 **Status:** required engineering standard
-**Updated:** 2026-08-19
+**Updated:** 2026-08-20
 
 Contour has two separate correctness obligations:
 
@@ -52,6 +52,24 @@ signal. Do not retain tests as historical artifacts.
 The layers below are options selected by affected risk, not a requirement to
 duplicate every behavior at every layer.
 
+The filesystem exposes the selected verification boundary rather than mirroring
+every production module:
+
+```text
+tests/
+  architecture/             dependency direction and structural safeguards
+  unit/                     external-service-free domain, service, and infrastructure logic
+  contract/api/             public HTTP and OpenAPI behavior
+  integration/postgres/     real schema, repository, and transaction behavior
+  tooling/                  repository-owned quality scripts
+  conftest.py               repository-wide test selection only
+```
+
+Add `knowledge/`, `end_to_end/`, or `evaluation/` only when those suites contain
+real admitted checks. Shared fixtures remain at the narrowest directory that
+uses them. Do not create a test file merely to mirror a production file; group
+tests by the contract or failure boundary they protect.
+
 ### Unit and property tests
 
 Cover identifiers, hashing, canonicalization, source locators, temporal values, state transitions, entity normalization, relationship construction, metric calculations, and run-manifest serialization. Use property tests for identities, intervals, ordering, and round trips where useful.
@@ -98,6 +116,10 @@ invariant, end-to-end, evaluation, or benchmark suites only when the change can
 affect that boundary or when its acceptance contract explicitly requires them.
 Record any relevant suite that could not run; do not run or expand unrelated
 suites merely to increase test counts.
+
+The dedicated CI PostgreSQL job runs `make test-integration` for migration or
+persistence changes against an ephemeral service. Locally, these checks remain
+explicitly selected so the default suite never mutates a developer database.
 
 ## Definition of done
 

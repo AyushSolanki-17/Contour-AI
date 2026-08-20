@@ -1,21 +1,21 @@
-"""Framework-independent domain values for Contour's knowledge model."""
+"""Framework-independent values that preserve Contour's knowledge invariants.
 
-from contour.domain.catalog import Source, Workspace
-from contour.domain.execution import Job, Run
-from contour.domain.identifiers import (
-    ContentDigest,
-    EntityId,
-    EvidenceId,
-    JobId,
-    RelationshipId,
-    RunId,
-    SourceId,
-    SourceVersionId,
-    WorkspaceId,
-)
-from contour.domain.knowledge import Entity, Relationship
-from contour.domain.source import EvidenceLocator, SourceVersion
-from contour.domain.time import TimePoint
+The package is organized by reader-facing domain concepts: workspaces define
+admission scope; sources and source versions preserve immutable origin content;
+evidence points exactly into a version; entities and relationships express
+evidence-backed knowledge; jobs and runs retain durable execution state; and
+time represents a known instant or an explicit unknown.
+"""
+
+from contour.domain.entity import Entity, EntityId
+from contour.domain.evidence import EvidenceId, EvidenceLocator
+from contour.domain.job import Job, JobId
+from contour.domain.relationship import Relationship, RelationshipId
+from contour.domain.run import Run, RunId
+from contour.domain.source import Source, SourceId
+from contour.domain.source_version import ContentDigest, SourceVersion, SourceVersionId
+from contour.domain.time_point import TimePoint
+from contour.domain.workspace import Workspace, WorkspaceId
 
 __all__ = [
     "ContentDigest",

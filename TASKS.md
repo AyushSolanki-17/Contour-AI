@@ -1,6 +1,6 @@
 # Contour Active Work
 
-**Status:** no active cards; three ordered follow-ups
+**Status:** one active card; two ordered follow-ups
 **Updated:** 2026-08-20
 
 This is the bounded execution queue for work promoted from the ordered
@@ -10,19 +10,13 @@ before implementation; a reviewer accepts it, records the result in the
 
 ## Active queue
 
-## Scheduled follow-ups
-
-These cards are deliberately `planned`, not simultaneously ready. Promote only
-the first card whose dependency has been accepted, and keep one backend card
-claimed at a time.
-
 ### P0-08 — Persist the source catalog and evidence core
 
 Owner role: backend
-Assignee: unassigned
+Assignee: Codex
 Priority: P1
-Status: planned
-Depends on: `P0-07`
+Status: review
+Depends on: `P0-07` (accepted)
 Product: `PROD-P0-01`
 
 #### Goal
@@ -47,15 +41,24 @@ from.
 
 #### Acceptance criteria
 
-- [ ] A clean database migrates to the new schema and repeat migration remains
+- [x] A clean database migrates to the new schema and repeat migration remains
       safe.
-- [ ] Workspace, source, immutable version, and evidence records round-trip
+- [x] Workspace, source, immutable version, and evidence records round-trip
       without losing namespace, digest, locator, or unknown-time meaning.
-- [ ] Duplicate identities, conflicting immutable content, and orphan evidence
+- [x] Duplicate identities, conflicting immutable content, and orphan evidence
       fail rather than silently overwrite accepted state.
-- [ ] Failed writes do not leave a partially accepted catalog change.
-- [ ] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
+- [x] Failed writes do not leave a partially accepted catalog change.
+- [x] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
+
+Verification: `make test-integration` (27 passed), `make quality` (24 passed,
+3 opt-in integration checks skipped), `make docs`, and `make openapi-check`.
+
+## Scheduled follow-ups
+
+These cards are deliberately `planned`, not simultaneously ready. Promote only
+the first card whose dependency has been accepted, and keep one backend card
+claimed at a time.
 
 ### P0-09 — Persist knowledge and execution records
 

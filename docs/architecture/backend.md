@@ -1,7 +1,7 @@
 # Backend Architecture
 
 **Status:** controlling Phase 0 implementation direction
-**Updated:** 2026-08-19
+**Updated:** 2026-08-20
 
 ## Decision
 
@@ -37,62 +37,157 @@ flowchart LR
 5. Raw and large derived artifacts use content addressing; metadata and integrity references live in PostgreSQL.
 6. Jobs, retries, cancellation, stages, failures, outputs, and metrics share one observable run lifecycle.
 7. Serving indexes and caches are disposable projections rebuildable from authoritative records and artifacts.
-8. Vendor-specific types remain inside adapters.
+8. Vendor-specific types remain inside infrastructure.
 9. Simple deterministic implementations remain the reference until measurement justifies a replacement.
 
-## Proposed package boundaries
+## Accepted package boundaries
 
-The exact filesystem can evolve, but these dependency boundaries are stable:
+Contour organizes the modular monolith by architectural boundary first and by
+product capability inside that boundary. These ownership and dependency rules
+are stable even while new capabilities are added:
 
 | Package | Owns | Must not own |
 |---|---|---|
 | `domain` | identifiers, entities, relationships, evidence, versions, jobs/runs, invariants | HTTP, SQL, provider, or UI details |
-| `application` | workspace, source, ingestion, search, entity, evidence, and run use cases | framework sessions or raw SQL |
-| `ingest` | source contracts, acquisition, checksums, normalization, incremental decisions | authorization or presentation |
-| `extract` | deterministic extraction and bounded typed model outputs later | source truth or human decisions |
-| `search` | lexical query, filtering, candidates, ranking contracts | investigation conclusions |
-| `runtime` | job/run lifecycle, worker stages, retries, cancellation, checkpoints | domain-specific reasoning |
-| `policy` | security context, data classification, egress, and approval decisions | authentication UI |
+| `services` | use cases, commands/queries/results, transaction intent, and safe operational errors organized by capability | framework sessions, SQL, provider payloads, or HTTP semantics |
+| `repositories` | capability-specific persistence ports and unit-of-work contracts consumed by services | SQLAlchemy, driver types, SQL, generic CRUD bases, or transport behavior |
 | `api` | FastAPI schemas, validation, errors, pagination, idempotency, versioning | business rules or direct persistence |
-| `adapters` | PostgreSQL, artifacts, sources, and future external providers | durable domain semantics |
-| `evaluate` | fixtures, metrics, regression identity, and run comparison | product truth based only on model judges |
+| `worker` *(when implemented)* | durable-job delivery, polling, cancellation handling, and service-error translation | extraction policy, SQL, or in-memory job authority |
+| `infrastructure/<technology>` | PostgreSQL, artifact, source, and provider implementations of repository or service ports | durable domain semantics or use-case policy |
+| `observability` | logging, metrics, tracing setup, redaction integration, and telemetry adapters | product decisions or request orchestration |
+| `evaluate` *(when implemented)* | fixtures, metrics, regression identity, and run comparison | product truth based only on model judges |
 | `bootstrap` | executable composition roots, dependency construction, and process lifetimes | business rules or runtime dependency lookup from core code |
+| `settings.py` | validated process configuration values and startup configuration failures | service behavior, provider calls, or resource construction |
 
-Review every change for these dependency directions. Add an automated import
-boundary check when the packages contain enough real business code or a
-demonstrated regression makes that check more valuable than its maintenance
-cost.
+Source-specific acquisition belongs in infrastructure such as
+`infrastructure/sources/pep/`; its orchestration belongs in a capability-named
+service such as `services/ingestion_service.py`. PostgreSQL search, catalog,
+knowledge, and execution code remain peer capabilities below
+`infrastructure/postgres/`. The repository does not create these modules before
+the corresponding behavior exists.
+
+The automated architecture checks enforce the current dependency directions
+and reject ambiguous catch-all module names, SQL inside services or repository
+ports, and direct persistence access from API routes.
 
 ## Code organization and request flow
 
-Contour uses ports-and-adapters boundaries with use-case-oriented application
-services. Names such as controller, service, repository, model, and DTO describe
+Contour uses ports-and-adapters dependency rules with conventionally named
+layers. Names such as controller, service, repository, model, and DTO describe
 responsibilities; they do not require a generic framework base class.
 
 ```text
 HTTP request
   -> api route/controller + Pydantic request schema
-  -> application use-case service + framework-neutral command/query value
-  -> behavior-focused port
-  -> PostgreSQL/source/artifact adapter
-  -> application result
+  -> service + framework-neutral command/query value
+  -> capability-specific repository or service port
+  -> PostgreSQL/source/artifact infrastructure
+  -> service result
   -> api Pydantic response schema
 ```
 
-The initial layout applies that flow as follows:
+The implemented layout applies that flow as follows:
 
 ```text
 src/contour/
-  domain/                 domain objects, value objects, and invariants
-  application/            use cases, ports, commands, queries, and results
-  adapters/               PostgreSQL, artifact, source, and provider adapters
+  domain/                         one module per domain concept and its identity
+  services/
+    error.py                      shared service-error base only
+    health_service.py             framework-neutral health use cases
+    catalog_service.py            atomic catalog admission use case
+    catalog_errors.py             safe catalog failure contracts
+  repositories/
+    workspace.py                  workspace persistence port
+    source.py                     logical-source persistence port
+    source_version.py             immutable-version persistence port
+    evidence.py                   exact-evidence persistence port
+    catalog_transaction.py        atomic catalog unit-of-work contract
+  infrastructure/
+    postgres/
+      engine.py                   process-scoped engine and pool policy
+      readiness.py                PostgreSQL health implementation
+      tables/
+        metadata.py               shared SQLAlchemy metadata registry
+        catalog.py                catalog/evidence table definitions
+        registry.py               assembled head-schema metadata
+      catalog_transaction.py      atomic PostgreSQL unit of work
+      workspace_repository.py     workspace queries and row mapping
+      source_repository.py        source queries and row mapping
+      source_version_repository.py version queries and row mapping
+      evidence_repository.py      evidence queries and row mapping
   api/
-    routes/               thin HTTP controllers grouped by resource/capability
-    schemas/              Pydantic-only public request/response contracts
-    errors.py             application-error to HTTP translation
-    app.py                FastAPI assembly from constructed dependencies
-  bootstrap.py            process entry points and dependency construction
+    routes/                       thin HTTP controllers by resource/capability
+    schemas/                      Pydantic-only public wire contracts
+    error_handler.py              service-error to HTTP translation
+    app.py                        HTTP delivery assembly
+  bootstrap/
+    http.py                       HTTP composition and process lifetimes
+  observability/
+    logging.py                    logging configuration and secret redaction
+  settings.py                     validated process configuration
 ```
+
+This conventional layout is deliberately literal: developers find orchestration
+under `services/`, persistence interfaces under `repositories/`, business
+meaning under `domain/`, HTTP contracts under `api/`, and external-system code
+under `infrastructure/`. Each file remains capability-specific, so the familiar
+layer names do not become generic dumping grounds.
+
+Contour does not add a separate `db/` package because engine, connection, table,
+and transaction behavior is currently PostgreSQL-specific and already has one
+clear owner under `infrastructure/postgres/`. If a technology-neutral database
+responsibility emerges, it can be extracted with evidence rather than duplicated
+in anticipation.
+
+### Dependency direction
+
+| Importing code | May depend on | Must not depend on |
+|---|---|---|
+| `domain` | standard library and other domain concepts | services, repositories, infrastructure, delivery, settings, observability, or third-party frameworks |
+| `repositories` | domain and other capability-specific repository contracts | services, infrastructure, delivery, settings, observability, database/provider libraries |
+| `services` | domain and repository or provider ports | infrastructure, delivery, settings, observability, database/provider libraries |
+| `infrastructure` | domain, repository/service contracts, settings, and technology libraries | API, worker delivery, or bootstrap |
+| `api` and future `worker` | service contracts, domain values needed for translation, and delivery libraries | repositories, concrete infrastructure, or bootstrap |
+| `observability` | standard library and telemetry libraries | domain or service policy, repositories, infrastructure, delivery, or bootstrap |
+| `settings.py` | standard library | core policy, infrastructure, delivery frameworks, or database clients |
+| `bootstrap` | any package required to construct one executable | business rules or service-locator access from inward packages |
+
+Services may use another capability's explicit public contract when a real
+workflow coordinates them. They must not reach into private helpers or form
+circular imports. The composition root is the only ordinary location that
+imports both a delivery adapter and concrete infrastructure.
+
+### Decision evidence and evolution
+
+The requirement is to add API, worker, ingestion, knowledge, and search behavior
+without letting framework, provider, or database concerns become service or
+domain policy. Capability-colocated application/adapter packages were the prior
+sound alternative. The conventional layer names were selected because they
+preserve the same dependency direction while making the first navigation step
+immediately recognizable to FastAPI developers.
+
+This structure adds no deployment boundary and no runtime framework. Its main
+failure risk is ceremonial fragmentation, controlled by creating packages only
+for implemented behavior and splitting modules only for distinct reasons to
+change. Its main security and reliability benefit is that untrusted transport
+input, bound database values, safe service errors, transaction scopes, and
+secret-aware observability each have an explicit owner.
+
+The refactor changes internal Python import paths but not the HTTP contract,
+database schema, migration history, transaction behavior, or deployment shape.
+Rollback therefore restores the prior package names without a data migration.
+Because the package is pre-release and has no declared third-party Python API,
+compatibility is enforced at the HTTP, persistence, and migration boundaries
+rather than through temporary internal import shims.
+
+Modules can be collapsed if their responsibilities disappear, and concrete
+infrastructure can be replaced by implementing the capability-specific ports;
+no domain migration is required for either change. The layer packages should be
+renamed or reorganized again if they become dumping grounds. A separate
+distribution, deployable service, DI container, ORM-domain model, or specialized
+datastore still needs a new workload and admission evidence. Import-direction
+tests, schema-drift checks, API contracts, and real PostgreSQL transaction tests
+verify the current decision.
 
 ### Namespace and distribution boundary
 
@@ -104,19 +199,37 @@ or a second `contour.core` catch-all. Split a delivery adapter into another
 distribution only when it has a real independent versioning, ownership, reuse,
 or deployment boundary with its own project metadata.
 
-Each new top-level production class has its own capability-named Python file. Keep
-package-wide constants, type aliases, and validation helpers in one clearly
-named shared module within the owning package. Split existing multi-class
-modules when they are materially changed; do not churn stable code solely to
-move declarations. Do not create empty `services`, `repositories`,
-`controllers`, or `utils` directories in anticipation of growth. FastAPI
-routers are Contour's HTTP controllers. Server-rendered views are not part of
-this backend.
+Name each production module for one clear domain or service concept in
+`snake_case`: `workspace.py`, `source.py`, and `source_version.py`, for example.
+Keep an aggregate/value object with inseparable identity types in its concept
+module—`Workspace` with `WorkspaceId`, and `SourceVersion` with
+`SourceVersionId` and `ContentDigest`. Split unrelated public classes into their
+own concept-named modules; private helpers that serve only one concept may remain
+there. Keep package-wide constants, type aliases, and validation helpers in one
+clearly named shared module within the owning package. Use a capability
+subpackage when it makes related concepts easier to discover. Preserve stable
+package-level public imports only for an intentional facade. Capability
+`__init__.py` files may expose stable domain or service contracts, and
+`bootstrap/__init__.py` may preserve executable entrypoints; layer packages and
+concrete infrastructure packages remain free of implementation re-exports so
+imports show the actual owner. `services/`, `repositories/`, and
+`infrastructure/` are accepted layer names with strict ownership; their modules
+must still be capability-specific. Do not create ambiguous catch-all modules or
+packages named `common`, `core`, `helpers`, `models`, or `utils`. Do not create
+empty architectural directories in anticipation of growth. FastAPI routers are
+Contour's HTTP controllers.
+Server-rendered views are not part of this backend.
+
+Promote a cohesive module to a capability package when it has at least two
+independent responsibilities with different reasons to change, or when a real
+delivery/infrastructure boundary requires separate ports and implementations.
+Split by concept or use case, not by class count. Roughly 400 handwritten lines
+remains a review signal rather than an automatic split rule.
 
 HTTP, a future CLI, a future MCP server, workers, and tests are peer delivery
 adapters. They may translate their own inputs and outputs, but they invoke the
-same application services. Application services never call routes, parse HTTP
-requests, emit CLI text, or depend on MCP/FastAPI types.
+same services. Services never call routes, parse HTTP requests, emit CLI text,
+or depend on MCP/FastAPI types.
 
 ## Model and DTO ownership
 
@@ -125,47 +238,103 @@ One class must not serve all layers merely because the fields initially match:
 | Type | Location and representation | Purpose |
 |---|---|---|
 | Domain model | `domain`; plain typed Python value/entity objects | identity, state, and knowledge invariants |
-| Application command/query/result | `application`; plain dataclasses or typed values | transport-neutral use-case input and output |
+| Service command/query/result | `services`; plain dataclasses or typed values when a separate representation is justified | transport-neutral use-case input and output |
 | API schema | `api/schemas`; Pydantic models | untrusted HTTP validation, serialization, and OpenAPI |
-| Persistence model | `adapters/postgres`; SQLAlchemy tables/mappings | SQL schema and database mapping details |
+| Persistence model | `infrastructure/postgres/tables`; SQLAlchemy Core tables | SQL schema and database mapping details |
 
 Translate explicitly at a boundary. Reuse an immutable value object across
-domain and application only when it retains exactly the same semantics; never
+domain and services only when it retains exactly the same semantics; never
 make domain behavior depend on Pydantic, SQLAlchemy, or FastAPI. Migration files
 remain the durable schema history and must not import API models.
 
 Repository ports expose behavior needed by a use case or aggregate, such as
 `get_workspace` or `add_source_version`; they are not generic CRUD base classes.
-PostgreSQL implementations, query expressions, ORM mappings, and row conversion
-remain in the adapter. Application services own transaction intent. A
-PostgreSQL unit-of-work or transaction adapter will provide the actual atomic
-scope when Phase 0.2 introduces state-changing use cases.
+PostgreSQL implementations, query expressions, table mappings, and row conversion
+remain in infrastructure. Services own transaction intent.
+
+The implemented catalog slice uses one focused repository port each for
+workspaces, logical sources, immutable source versions, and evidence locators.
+Its PostgreSQL transaction implementation is a factory for
+request/command-scoped units of work; each unit checks out one pooled connection,
+composes those repositories, and commits or rolls back atomically. Runtime
+queries use SQLAlchemy Core tables
+and bound expressions rather than duplicated SQL strings or ORM-backed domain
+models. Persistence failures are translated at the infrastructure boundary into
+stable, safe service errors. A replacement persistence technology therefore
+implements the same behavior-focused ports without changing domain objects or
+the catalog service. Do not introduce generic repository bases or
+factories that construct arbitrary domain objects: explicit constructor wiring
+at `bootstrap` is the simpler composition pattern until a real additional
+runtime needs a fresh scoped resource.
+
+### Persistence implementation policy
+
+SQLAlchemy Core is the default runtime query API because it is already required
+by Alembic, preserves explicit domain models, binds values safely, and provides
+one schema vocabulary for queries and migration-drift checks. Contour does not
+use ORM entities as domain objects. A handwritten SQL statement is allowed only
+when PostgreSQL behavior cannot be expressed clearly or efficiently with Core;
+it must stay inside PostgreSQL infrastructure, bind every untrusted value,
+whitelist any dynamic identifier or ordering token, document why Core was
+insufficient, and receive an integration or benchmark check appropriate to its
+risk.
+
+Migration revisions remain immutable schema history. SQLAlchemy metadata models
+the expected head schema, and the isolated migration integration check rejects
+drift between the two. Repository methods select only fields needed for their
+domain mapping, important use cases document query count and transaction scope,
+and performance work requires an observed workload rather than speculative
+caching or denormalization.
+
+Alembic revisions are the only mechanism that changes a durable Contour schema.
+The SQLAlchemy Core metadata registry is descriptive input for query construction,
+autogeneration, and head-schema comparison; it is not a runtime schema
+synchronizer. API and worker startup must never call `MetaData.create_all()`,
+`MetaData.drop_all()`, run `alembic upgrade`, or otherwise mutate schema as a
+lifespan side effect. A release process applies `alembic upgrade head` as a
+separate observable step before starting code that requires the new schema.
+Production deployment orchestration is not implemented yet, so no current
+runtime claims to perform that step.
+
+Autogenerated revisions are drafts, not authority. Every schema change is
+reviewed for names, types, nullability, constraints, indexes, defaults, data
+movement, lock impact, and recovery behavior, then exercised from the tracked
+baseline on an isolated PostgreSQL database. Renames and data migrations are
+authored explicitly. Non-additive changes use an expand/backfill/verify/contract
+sequence when overlapping application versions need compatibility; a destructive
+rebuild is never a production recovery strategy.
 
 ## Dependency wiring and lifetimes
 
 Use explicit constructor or function injection and assemble the object graph in
-`bootstrap.py`. This is dependency injection without a runtime DI framework:
-dependencies are visible to type checking and tests, construction failures
-happen at startup, and core packages contain no global service lookup.
+`bootstrap/<executable>.py`. This is dependency injection without a runtime DI
+framework: dependencies are visible to type checking and tests, construction
+failures happen at startup, and core packages contain no global service lookup.
 
-- Stateless application services and immutable configuration may be built once
+- Stateless services and immutable configuration may be built once
   per process and shared.
 - Connection pools, clients, and worker resources are created and closed by an
-  explicit application lifespan or context manager.
+  explicit executable lifespan or context manager.
 - Database sessions, transactions, authorization contexts, and request metadata
   are scoped to one request, command, or job; they are never process singletons.
 - Factories are injected when a use case needs a fresh scoped resource.
 - A dependency registry may be used only at a delivery/composition boundary;
-  application and domain code must declare their direct dependencies instead of
+  service and domain code must declare their direct dependencies instead of
   pulling them from a service locator.
 
 FastAPI's dependency mechanism may adapt HTTP request-scoped values, but it is
-not the owner of domain or application construction. Adopt a third-party DI
+not the owner of domain or service construction. Adopt a third-party DI
 container only if the real graph develops multiple scopes, conditional bindings,
 or plugin wiring that manual composition can no longer keep clear. Record the
 need, lifecycle and cleanup behavior, simpler alternative, test evidence, and a
 removal path before adding that dependency. Singleton support alone is not a
 reason to add a container.
+
+The HTTP composition root currently creates one SQLAlchemy engine and connection
+pool for the process, injects it into PostgreSQL infrastructure, and disposes it through
+FastAPI lifespan handling. This is ordinary constructor injection; a third-party
+DI container is intentionally deferred because the graph has no conditional or
+plugin-driven bindings that justify another runtime dependency.
 
 ## Data ownership
 
@@ -175,7 +344,7 @@ Artifact storage is authoritative for acquired bytes, large normalized artifacts
 
 The [knowledge model](knowledge-model.md) controls meaning independently of physical tables.
 
-## Initial application contracts
+## Initial service contracts
 
 - create, list, and get workspaces;
 - validate, add, list, and get sources;
@@ -186,7 +355,20 @@ The [knowledge model](knowledge-model.md) controls meaning independently of phys
 - get evidence and its immutable source version; and
 - inspect the run and transformation chain that produced a record.
 
-HTTP handlers, workers, CLI commands, and tests call the same application services. API contracts must be usable without importing Python internals so frontend repositories can generate or maintain independent clients.
+HTTP handlers, workers, CLI commands, and tests call the same services. API contracts must be usable without importing Python internals so frontend repositories can generate or maintain independent clients.
+
+## Error ownership
+
+- Domain constructors and transitions raise `TypeError` or `ValueError` for
+  programmer misuse or invalid domain values before persistence.
+- Each service capability owns safe, transport-neutral operational errors
+  derived from the shared `ApplicationError` contract.
+- Infrastructure translates driver/provider exceptions at its boundary; service
+  and delivery code never branch on SQLAlchemy, psycopg, or provider exceptions.
+- Delivery adapters map safe service errors to protocol status and envelopes
+  without serializing exception causes, statements, credentials, or payloads.
+- `ConfigurationError` belongs to `settings.py` and fails executable startup;
+  it is not an HTTP service error because no valid application exists yet.
 
 ## Failure and trust model
 

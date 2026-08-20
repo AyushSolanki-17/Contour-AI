@@ -54,8 +54,23 @@ slice.
 ## Architecture rules
 
 - Keep domain and application code independent of FastAPI, PostgreSQL clients, provider SDKs, and frontend types.
-- Routes translate and validate; application services orchestrate; adapters perform infrastructure work.
+- Use conventional layer names with strict ownership: application use cases live
+  under `services/`, capability-specific persistence interfaces live under
+  `repositories/`, and concrete external-system implementations live under
+  `infrastructure/<technology>/`.
+- Keep repository modules capability-specific. Do not create a global ports
+  registry, generic CRUD/base repository hierarchy, or services that only rename
+  persistence calls without adding orchestration or policy.
+- Routes translate and validate; services orchestrate; infrastructure performs
+  external I/O.
+- Use explicit constructor/function injection and executable composition roots
+  under `bootstrap/`. Do not add a DI container or service locator without a
+  demonstrated multi-scope, conditional-binding, or plugin-wiring requirement.
 - PostgreSQL and content-addressed artifacts hold durable state. Do not rely on process memory for job correctness.
+- Use SQLAlchemy Core as the default runtime PostgreSQL query API. Keep all
+  query expressions and row mapping inside PostgreSQL infrastructure.
+  Handwritten SQL requires a concrete Core limitation, bound values, whitelisted
+  dynamic identifiers, and risk-proportional integration or benchmark evidence.
 - Preserve immutable source versions, exact evidence, provenance, namespaced identity, and explicit unknowns.
 - Treat indexes and caches as rebuildable projections.
 - Keep vendor-specific and future technology choices behind behavior-focused ports.
@@ -81,13 +96,23 @@ slice.
 
 - Work in small vertical increments that leave a runnable, tested contract.
 - Prefer deterministic behavior and the simplest implementation that satisfies the current requirement.
-- Put each new top-level production class in its own capability-named Python
-  file.
-  Keep package-wide constants, type aliases, and validation helpers in one
-  clearly named shared module within that package; do not scatter them across
-  individual class modules or create generic `models` or `utils` catch-alls.
-  Existing multi-class modules can be split when they are next materially
-  changed; do not churn stable code solely to satisfy this convention.
+- Name each production module for one clear domain or application concept, using
+  `snake_case` (for example, `workspace.py` or `source_version.py`). Keep its
+  aggregate/value object and inseparable identity types together: `Workspace`
+  and `WorkspaceId` belong in `workspace.py`; `SourceVersion`,
+  `SourceVersionId`, and `ContentDigest` belong in `source_version.py`. Split
+  unrelated public classes into their own concept-named modules. A module may
+  contain private helpers needed only by its concept. Keep package-wide
+  constants, type aliases, and validation helpers in a clearly named shared
+  module within that package; do not scatter them across concept modules or
+  create generic catch-alls. Use a capability subpackage when it makes related
+  concepts easier to discover. Capability package initializers may expose
+  stable domain or service contracts, and `bootstrap/__init__.py` may preserve
+  executable entrypoints; layer and concrete-infrastructure initializers must
+  not hide implementation imports. The conventional `services/`,
+  `repositories/`, and `infrastructure/` packages must retain their declared
+  ownership. Do not add ambiguous catch-all modules or packages named `common`,
+  `core`, `helpers`, `models`, or `utils`.
 - Treat roughly 400 lines as a review prompt for a handwritten production Python
   module. Split by responsibility when doing so makes the code easier to follow;
   generated code, migrations, and fixture data are assessed by their own needs.

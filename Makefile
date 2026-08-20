@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test test-integration docs openapi openapi-check run precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current
+.PHONY: format lint typecheck test test-integration docs openapi openapi-check run precommit hooks quality db-up db-ready db-psql db-stop migrate migration-current migration-check
 
 format:
 	uv run ruff format --check .
@@ -50,5 +50,8 @@ migrate:
 
 migration-current:
 	uv run alembic current
+
+migration-check:
+	uv run alembic check
 
 quality: format lint typecheck test openapi-check

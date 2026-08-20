@@ -60,12 +60,45 @@ set -a
 set +a
 make migrate
 make migration-current
+make migration-check
 ```
 
 `make migrate` is safe to re-run: it only applies revisions not already
-recorded in the database. The initial baseline intentionally creates no
-application tables; it establishes the migration history for the Phase 0.2
-schema work.
+recorded in the database. The current Phase 0 catalog schema creates
+`workspaces`, `sources`, immutable `source_versions`, and exact `evidence`
+records. It does not yet implement acquisition, extraction, indexing, or
+knowledge/execution tables.
+
+`make migration-check` compares the SQLAlchemy Core metadata registry with the
+connected database and fails when a schema change has no matching migration.
+Metadata is comparison and query input only: Contour application startup never
+calls `create_all()`, `drop_all()`, or Alembic. Schema changes are explicit
+operator/release actions.
+
+### Author a schema change
+
+First update the capability-owned Core table metadata under
+`infrastructure/postgres/tables/`, then generate a candidate revision against a
+database already migrated to the current head:
+
+```shell
+uv run alembic revision --autogenerate -m "describe the schema change"
+```
+
+Review the generated file before committing it. Verify identifiers, types,
+nullability, indexes, constraints, server defaults, lock impact, and recovery;
+write renames, backfills, and other data migrations explicitly because
+autogeneration cannot infer their intent. Then run:
+
+```shell
+make test-integration
+make migration-check
+```
+
+The dedicated CI PostgreSQL job repeats the isolated migration and drift checks.
+Future production deployment automation must run `alembic upgrade head` as a
+separate release step before starting code that requires the new schema; it must
+not move that responsibility into API or worker startup.
 
 If a migration fails, retain the error output and inspect the current revision
 with `make migration-current`. Do not use a destructive reset as ordinary

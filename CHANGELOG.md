@@ -17,6 +17,9 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Durable PostgreSQL entities, evidence-backed relationships, jobs, and
+  independent run attempts, with lifecycle constraints, exact evidence
+  attachments, atomic persistence, and isolated integration coverage.
 - Durable PostgreSQL catalog persistence for workspaces, sources, immutable
   source versions, and exact evidence locators, including atomic admission and
   isolated clean-database integration coverage.

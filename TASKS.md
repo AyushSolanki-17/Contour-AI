@@ -86,9 +86,9 @@ claimed at a time.
 ### P0-09 — Persist knowledge and execution records
 
 Owner role: backend
-Assignee: unassigned
+Assignee: Codex
 Priority: P1
-Status: planned
+Status: review
 Depends on: `P0-08`
 Product: `PROD-P0-01`
 
@@ -113,14 +113,18 @@ that either workflow already executes.
 
 #### Acceptance criteria
 
-- [ ] Entities and relationships round-trip with stable identity and exact
+- [x] Entities and relationships round-trip with stable identity and exact
       evidence references.
-- [ ] Jobs and run attempts retain explicit lifecycle, failure, cancellation,
+- [x] Jobs and run attempts retain explicit lifecycle, failure, cancellation,
       and retry meaning without relying on process memory.
-- [ ] Orphan evidence, invalid endpoints, invalid transitions, and partial
+- [x] Orphan evidence, invalid endpoints, invalid transitions, and partial
       writes are rejected safely.
-- [ ] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
+- [x] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
+
+Verification: `make test-integration` (29 passed), `make quality` (25 passed,
+4 opt-in integration checks skipped), `make migration-check`, `make docs`, and
+`make openapi-check` pass. The local development schema is at `20260824_04`.
 
 ### P0-10 — Establish deterministic PEP preflight and acquisition
 

@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260824_03"
+_REVISION = "20260824_04"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -62,7 +62,13 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
                     )
                     assert cursor.fetchall() == [
                         ("alembic_version",),
+                        ("entities",),
+                        ("entity_evidence",),
                         ("evidence",),
+                        ("jobs",),
+                        ("relationship_evidence",),
+                        ("relationships",),
+                        ("runs",),
                         ("source_versions",),
                         ("sources",),
                         ("workspaces",),

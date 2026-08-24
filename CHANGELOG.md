@@ -10,8 +10,16 @@ date without rewriting what was actually delivered.
 
 ## Unreleased
 
+### Fixed
+
+- PostgreSQL now rejects exact-evidence spans that specify only one offset,
+  matching the domain's both-or-neither locator invariant.
+
 ### Added
 
+- Durable PostgreSQL entities, evidence-backed relationships, jobs, and
+  independent run attempts, with lifecycle constraints, exact evidence
+  attachments, atomic persistence, and isolated integration coverage.
 - Durable PostgreSQL catalog persistence for workspaces, sources, immutable
   source versions, and exact evidence locators, including atomic admission and
   isolated clean-database integration coverage.

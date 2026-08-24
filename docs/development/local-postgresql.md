@@ -64,10 +64,10 @@ make migration-check
 ```
 
 `make migrate` is safe to re-run: it only applies revisions not already
-recorded in the database. The current Phase 0 catalog schema creates
-`workspaces`, `sources`, immutable `source_versions`, and exact `evidence`
-records. It does not yet implement acquisition, extraction, indexing, or
-knowledge/execution tables.
+recorded in the database. The current Phase 0 schema creates `workspaces`,
+`sources`, immutable `source_versions`, exact `evidence`, evidence-backed
+entities and relationships, and durable jobs with distinct run attempts. It
+does not yet implement acquisition, extraction, or indexing.
 
 `make migration-check` compares the SQLAlchemy Core metadata registry with the
 connected database and fails when a schema change has no matching migration.

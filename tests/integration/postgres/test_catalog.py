@@ -8,6 +8,7 @@ from pathlib import Path
 
 import psycopg
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from psycopg import sql
@@ -28,6 +29,7 @@ from contour.infrastructure.postgres.catalog_transaction import (
     PostgresCatalogTransactionManager,
 )
 from contour.infrastructure.postgres.engine import create_postgres_engine
+from contour.infrastructure.postgres.tables.catalog import evidence as evidence_table
 from contour.services.catalog_errors import CatalogConflictError, CatalogReferenceError
 from contour.services.catalog_service import CatalogAdmissionService
 from contour.settings import DatabaseSettings, Settings
@@ -111,6 +113,21 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                 assert transaction.sources.get_source(source.id) == source
                 assert transaction.source_versions.get_source_version(version.id) == version
                 assert transaction.evidence.get_evidence(evidence_id) == evidence
+
+            with pytest.raises(sa.exc.IntegrityError, match="ck_evidence_valid_span"):
+                with engine.begin() as connection:
+                    connection.execute(
+                        sa.insert(evidence_table).values(
+                            namespace="EVIDENCE",
+                            value="invalid-half-null-span",
+                            source_namespace=version.source_id.namespace,
+                            source_value=version.source_id.value,
+                            content_digest=version.content_digest.value,
+                            locator="header:Replaces",
+                            start_offset=None,
+                            end_offset=1,
+                        )
+                    )
 
             with pytest.raises(CatalogConflictError):
                 with manager.transaction() as transaction:

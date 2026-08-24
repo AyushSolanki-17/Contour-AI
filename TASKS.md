@@ -14,6 +14,7 @@ before implementation; a reviewer accepts it, records the result in the
 
 Owner role: backend
 Assignee: Codex
+Reviewer: Codex (explicit user assignment)
 Priority: P1
 Status: review
 Depends on: `P0-07` (accepted)
@@ -50,9 +51,31 @@ from.
 - [x] Failed writes do not leave a partially accepted catalog change.
 - [x] Relevant unit and opt-in PostgreSQL integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
+- [x] PostgreSQL rejects an evidence span when exactly one of `start_offset` or
+      `end_offset` is null.
 
-Verification: `make test-integration` (27 passed), `make quality` (24 passed,
-3 opt-in integration checks skipped), `make docs`, and `make openapi-check`.
+Verification: `make test-integration` (28 passed), `make quality` (25 passed,
+3 opt-in integration checks skipped), `make docs`, `make openapi-check`, and
+`make migration-check`.
+
+Review result (2026-08-24): changes requested. The migrated
+`ck_evidence_valid_span` constraint accepts a half-null span because a
+PostgreSQL `CHECK` passes when its expression is unknown. A direct transaction
+against the migrated schema inserted `start_offset = NULL, end_offset = 1`
+successfully before rollback. This violates the domain's both-or-neither span
+invariant and can make a later repository read fail while reconstructing the
+locator. Correct the constraint through a new forward migration, synchronize
+the Core metadata, and add an integration regression that writes directly at
+the storage boundary; do not edit the accepted migration revision in place.
+
+Reviewer verification: `make test-integration` (28 passed), `make quality`
+(25 passed, 3 opt-in integration checks skipped), `make openapi-check`,
+`make docs`, and the rolled-back direct PostgreSQL half-null insertion probe.
+
+Review resolution (2026-08-24): added a forward migration that replaces the
+nullable check expression with an explicit both-or-neither predicate,
+synchronized the SQLAlchemy Core metadata, and added a direct PostgreSQL
+integration regression for a half-null span.
 
 ## Scheduled follow-ups
 

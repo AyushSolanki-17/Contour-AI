@@ -87,7 +87,8 @@ evidence = sa.Table(
     ),
     sa.CheckConstraint(
         "(start_offset IS NULL AND end_offset IS NULL) OR "
-        "(start_offset >= 0 AND end_offset > start_offset)",
+        "(start_offset IS NOT NULL AND end_offset IS NOT NULL "
+        "AND start_offset >= 0 AND end_offset > start_offset)",
         name="ck_evidence_valid_span",
     ),
 )

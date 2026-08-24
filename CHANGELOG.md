@@ -10,6 +10,11 @@ date without rewriting what was actually delivered.
 
 ## Unreleased
 
+### Fixed
+
+- PostgreSQL now rejects exact-evidence spans that specify only one offset,
+  matching the domain's both-or-neither locator invariant.
+
 ### Added
 
 - Durable PostgreSQL catalog persistence for workspaces, sources, immutable

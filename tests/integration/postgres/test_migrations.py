@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260820_02"
+_REVISION = "20260824_03"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 

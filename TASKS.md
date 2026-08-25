@@ -15,7 +15,7 @@ before implementation; a reviewer accepts it, records the result in the
 Owner role: backend
 Assignee: Codex
 Priority: P1
-Status: in-progress
+Status: review
 Depends on: `P0-10` (accepted)
 Product: `PROD-P0-01`
 
@@ -43,14 +43,24 @@ execution.
 
 #### Acceptance criteria
 
-- [ ] The pinned acquisition produces an integrity-verifiable artifact and one
+- [x] The pinned acquisition produces an integrity-verifiable artifact and one
       immutable source-version record with the same digest.
-- [ ] Repeating the same acquisition returns the accepted version without
+- [x] Repeating the same acquisition returns the accepted version without
       duplicate durable state or destructive overwrite.
-- [ ] Conflicting content, missing artifacts, checksum mismatch, and partial
+- [x] Conflicting content, missing artifacts, checksum mismatch, and partial
       failure remain explicit and recoverable.
-- [ ] Focused unit and integration checks, `make quality`,
+- [x] Focused unit and integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
+
+#### Verification evidence
+
+- Focused offline unit and architecture checks: 19 passed.
+- Real artifact/PostgreSQL integration and migration checks: 5 passed against
+  isolated migrated databases; the local schema is at `20260825_05 (head)` and
+  `alembic check` reports no upgrade operations.
+- `make quality`: 34 passed, 5 explicitly skipped integration tests; formatting,
+  linting, strict typing, default tests, and OpenAPI drift all passed.
+- `make openapi-check`, `make docs`, and `make precommit` passed.
 
 ## Scheduled follow-up
 

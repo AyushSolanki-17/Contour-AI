@@ -96,13 +96,17 @@ src/contour/
     health_service.py             framework-neutral health use cases
     catalog_service.py            atomic catalog admission use case
     catalog_errors.py             safe catalog failure contracts
+    pep_persistence.py            artifact-first immutable PEP admission
   repositories/
+    artifact.py                    exact content-addressed artifact port
     workspace.py                  workspace persistence port
     source.py                     logical-source persistence port
     source_version.py             immutable-version persistence port
     evidence.py                   exact-evidence persistence port
     catalog_transaction.py        atomic catalog unit-of-work contract
   infrastructure/
+    artifact/
+      filesystem.py               atomic SHA-256 filesystem artifacts
     postgres/
       engine.py                   process-scoped engine and pool policy
       readiness.py                PostgreSQL health implementation
@@ -341,6 +345,14 @@ plugin-driven bindings that justify another runtime dependency.
 PostgreSQL is authoritative for workspace and source metadata, immutable version manifests, evidence locators, basic entities and relationships, job/run state, search documents, and audit/security metadata appropriate to the current deployment.
 
 Artifact storage is authoritative for acquired bytes, large normalized artifacts, extraction/evaluation outputs, and reproducibility manifests. Every artifact reference includes an integrity digest.
+
+The implemented raw PEP persistence path writes and verifies exact admitted
+bytes through the artifact port before admitting their source-version manifest
+in PostgreSQL. A failed artifact operation therefore creates no manifest. A
+failed database operation may leave a valid content-addressed orphan, which the
+same request can reuse safely on retry. Missing and checksum-invalid filesystem
+artifacts remain explicit; resubmitting the already validated bytes repairs
+them atomically before the immutable manifest is returned.
 
 The [knowledge model](knowledge-model.md) controls meaning independently of physical tables.
 

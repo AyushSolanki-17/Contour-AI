@@ -17,6 +17,10 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Artifact-first persistence of exact admitted PEP bytes with atomic
+  SHA-256-addressed filesystem storage, immutable PostgreSQL manifests,
+  observation and optional upstream revision metadata, idempotent retries, and
+  explicit repair of missing or corrupt artifacts.
 - Offline deterministic PEP preflight and pinned-fixture acquisition with
   stable digests, revision metadata, and safe failure classification.
 - Durable PostgreSQL entities, evidence-backed relationships, jobs, and

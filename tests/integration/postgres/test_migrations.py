@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260824_04"
+_REVISION = "20260825_05"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -29,7 +29,7 @@ def _alembic_config() -> Config:
 
 @pytest.mark.integration
 def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A fresh isolated database reaches and remains at the head revision."""
+    """A fresh database reaches head without fabricating legacy observation time."""
     try:
         settings = Settings.from_environment()
     except Exception as error:
@@ -45,13 +45,47 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
             with maintenance_connection.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {} ").format(sql.Identifier(database_name)))
 
-            # Step 2: Apply the full migration path twice to prove repeatability.
+            # Step 2: Seed the prior accepted schema with a version whose
+            # observation time was not yet represented.
             monkeypatch.setenv("CONTOUR_POSTGRES_DB", database_name)
+            command.upgrade(_alembic_config(), "20260824_04")
+            with psycopg.connect(test_dsn) as test_connection:
+                with test_connection.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO workspaces "
+                        "(namespace, value, name, owner_name, settings) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        ("WORKSPACE", "migration", "Migration", "maintainer", "{}"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO sources "
+                        "(namespace, value, workspace_namespace, workspace_value, "
+                        "canonical_locator, source_type, scope, license, data_classification) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (
+                            "SOURCE:PEP",
+                            "723",
+                            "WORKSPACE",
+                            "migration",
+                            "https://peps.python.org/pep-0723/",
+                            "pep",
+                            "public",
+                            "PSF-2.0",
+                            "public",
+                        ),
+                    )
+                    cursor.execute(
+                        "INSERT INTO source_versions "
+                        "(source_namespace, source_value, content_digest) VALUES (%s, %s, %s)",
+                        ("SOURCE:PEP", "723", "a" * 64),
+                    )
+
+            # Step 3: Apply the head revision twice to prove repeatability.
             command.upgrade(_alembic_config(), "head")
             command.upgrade(_alembic_config(), "head")
             command.check(_alembic_config())
 
-            # Step 3: Verify the revision and durable Phase 0 catalog schema directly.
+            # Step 4: Verify the revision, schema, and explicit legacy unknown.
             with psycopg.connect(test_dsn) as test_connection:
                 with test_connection.cursor() as cursor:
                     cursor.execute("SELECT version_num FROM alembic_version")
@@ -73,8 +107,12 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
                         ("sources",),
                         ("workspaces",),
                     ]
+                    cursor.execute(
+                        "SELECT observed_at, observation_time_unknown FROM source_versions"
+                    )
+                    assert cursor.fetchone() == (None, True)
         finally:
-            # Step 4: Recover safely even when migration or verification fails.
+            # Step 5: Recover safely even when migration or verification fails.
             with maintenance_connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "

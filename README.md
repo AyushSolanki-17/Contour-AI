@@ -25,8 +25,9 @@ separate from runtime schema declarations.
 
 ## Development status
 
-Phase 0 is active. The Python package, local quality tooling, and durable
-source catalog/evidence foundation are implemented; the complete
+Phase 0 is active. The Python package, local quality tooling, durable
+catalog/evidence and knowledge/execution foundations, plus offline deterministic
+PEP preflight and fixture acquisition are implemented; the complete
 source-to-evidence backend is not yet implemented.
 See the bounded [active task queue](TASKS.md) to review or assign the next work,
 and the [changelog](CHANGELOG.md) for notable delivered behavior.

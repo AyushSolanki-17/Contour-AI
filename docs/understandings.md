@@ -25,9 +25,9 @@ are explicitly marked; they do not describe shipped behavior.
 
 | Term | Meaning in Contour | Example |
 |---|---|---|
-| **Entity** *(planned persistence)* | A namespaced thing known from evidence; it is not an unqualified assertion of truth. | `PEP:723` with evidence identifying the proposal. |
-| **Relationship** *(planned persistence)* | An evidence-backed typed edge between entities. Every credited relationship retains its own evidence. | `PEP:723 --replaces--> PEP:722`, supported by `header:Replaces`. |
-| **Job** *(planned persistence)* | One durable request for work, independent from any individual attempt to perform it. | “Ingest this supported PEP source” is one job. |
+| **Entity** | A namespaced thing known from evidence; it is not an unqualified assertion of truth. | `PEP:723` with evidence identifying the proposal. |
+| **Relationship** | An evidence-backed typed edge between entities. Every credited relationship retains its own evidence. | `PEP:723 --replaces--> PEP:722`, supported by `header:Replaces`. |
+| **Job** | One durable request for work, independent from any individual attempt to perform it. | “Ingest this supported PEP source” is one job. |
 | **Run** *(planned persistence)* | One observable attempt to execute a job, with its own lifecycle, outputs, and failure information. | A retry after a worker crash is a new run of the same ingestion job. |
 
 ## Time, boundaries, and runtime roles

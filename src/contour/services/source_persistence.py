@@ -1,27 +1,27 @@
-"""Application orchestration for durable accepted PEP content."""
+"""Application orchestration for durable source content admission."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from contour.domain.acquired_content import AcquiredContent
 from contour.domain.source_version import SourceVersion, SourceVersionId
 from contour.domain.time_point import TimePoint
 from contour.repositories.artifact import ArtifactRepository, ArtifactWriteState
 from contour.repositories.catalog_transaction import CatalogTransactionManager
 from contour.services.catalog_errors import CatalogConflictError
-from contour.services.pep_acquisition import PepAcquisition
 
 
 @dataclass(frozen=True, slots=True)
-class PepPersistenceResult:
-    """The accepted immutable manifest and the artifact write outcome."""
+class SourcePersistenceResult:
+    """The accepted immutable manifest and artifact write outcome."""
 
     version: SourceVersion
     artifact_state: ArtifactWriteState
 
 
-class PepPersistenceService:
-    """Persists validated PEP bytes before admitting their immutable manifest."""
+class SourcePersistenceService:
+    """Persists generic acquired bytes before admitting their immutable manifest."""
 
     def __init__(
         self,
@@ -32,9 +32,7 @@ class PepPersistenceService:
         self._artifacts = artifacts
         self._transactions = transactions
 
-    def persist(
-        self, acquisition: PepAcquisition, *, observed_at: TimePoint
-    ) -> PepPersistenceResult:
+    def persist(self, acquired: AcquiredContent) -> SourcePersistenceResult:
         """Persist exact bytes and return the first accepted immutable version.
 
         The artifact is written and integrity-checked before PostgreSQL. A
@@ -43,31 +41,24 @@ class PepPersistenceService:
         artifact operation.
 
         Raises:
-            TypeError: If the input values do not have their domain types.
-            ValueError: If the observation time is unknown.
-            ArtifactIntegrityError: If artifact bytes fail integrity validation.
-            ArtifactPersistenceError: If artifact storage fails.
+            TypeError: If the input is not source-neutral acquired content.
             CatalogConflictError: If accepted metadata would be rewritten.
             CatalogPersistenceError: If PostgreSQL persistence fails.
             CatalogReferenceError: If the logical source is not accepted.
         """
-        if not isinstance(acquisition, PepAcquisition):
-            raise TypeError("acquisition must be a PepAcquisition")
-        if not isinstance(observed_at, TimePoint):
-            raise TypeError("observed_at must be a TimePoint")
-        if not observed_at.is_known:
-            raise ValueError("observed_at must contain the acquisition observation time")
+        if not isinstance(acquired, AcquiredContent):
+            raise TypeError("acquired must be AcquiredContent")
 
         version = SourceVersion(
-            id=SourceVersionId(acquisition.configuration.source_id, acquisition.content_digest),
-            source_id=acquisition.configuration.source_id,
-            content_digest=acquisition.content_digest,
-            observed_at=observed_at,
-            upstream_revision=acquisition.upstream_revision,
+            id=SourceVersionId(acquired.source_id, acquired.content_digest),
+            source_id=acquired.source_id,
+            content_digest=acquired.content_digest,
+            observed_at=acquired.observed_at,
+            upstream_revision=acquired.upstream_revision,
             source_time=TimePoint.unknown(),
-            revision_time=acquisition.revision_time,
+            revision_time=acquired.revision_time,
         )
-        artifact_state = self._artifacts.persist(acquisition.content, acquisition.content_digest)
+        artifact_state = self._artifacts.persist(acquired.content, acquired.content_digest)
 
         try:
             accepted = self._admit_or_get(version)
@@ -76,7 +67,7 @@ class PepPersistenceService:
             if retry_winner is None:
                 raise
             accepted = retry_winner
-        return PepPersistenceResult(accepted, artifact_state)
+        return SourcePersistenceResult(accepted, artifact_state)
 
     def _admit_or_get(self, candidate: SourceVersion) -> SourceVersion:
         """Return an equivalent accepted version or insert the candidate."""

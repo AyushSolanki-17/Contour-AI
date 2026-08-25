@@ -1,6 +1,6 @@
 # Contour Active Work
 
-**Status:** one active card; one ordered follow-up
+**Status:** one active card; two ordered follow-ups
 **Updated:** 2026-08-25
 
 This is the bounded execution queue for work promoted from the ordered
@@ -62,9 +62,62 @@ execution.
   linting, strict typing, default tests, and OpenAPI drift all passed.
 - `make openapi-check`, `make docs`, and `make precommit` passed.
 
-## Scheduled follow-up
+## Scheduled follow-ups
 
-Keep `P0-12` planned until `P0-11` is separately accepted.
+Keep `P0-11A` and `P0-12` planned until their dependencies are accepted.
+
+### P0-11A — Remove reference-source coupling from application services
+
+Owner role: backend
+Assignee: Codex
+Priority: P1
+Status: review
+Depends on: `P0-11` acceptance
+Product: `PROD-P0-01`
+
+#### Goal
+
+Keep the PEP implementation as a replaceable reference adapter while making
+source acquisition and immutable persistence generic product capabilities.
+
+#### Requirements
+
+- Remove PEP-specific types and policy from reusable application service
+  boundaries, especially the durable persistence service.
+- Define a source-neutral acquired-content contract carrying only source
+  identity, exact bytes, content digest, observation time, and optional
+  upstream metadata.
+- Keep PEP number, canonical URL, HTML validation, and pinned fixture behavior
+  inside the reference-source adapter or fixture boundary.
+- Preserve artifact, immutable-version, idempotency, conflict, integrity, and
+  recovery behavior.
+- Update implementation-coupled documentation and tests to describe PEP as a
+  reference source, not a product-level domain requirement.
+
+#### Non-goals
+
+- Do not implement normalization, extraction, indexing, workers, network
+  acquisition, or public ingestion routes.
+- Do not add a generic plugin framework, DI framework, or speculative provider
+  registry.
+
+#### Acceptance criteria
+
+- [x] Generic application services and persistence results contain no PEP-
+      specific types or validation rules.
+- [x] The PEP fixture adapter still satisfies the generic acquisition boundary
+      and existing PEP failure classifications remain covered.
+- [x] Artifact/PostgreSQL invariants remain green, including idempotent retry
+      and immutable conflict rejection.
+- [x] Architecture checks prove source-specific code is outside generic domain
+      and application policy.
+- [x] Focused tests, `make quality`, `make openapi-check`, and `make docs` pass.
+
+#### Verification evidence
+
+- Focused source, artifact, and architecture checks: 15 passed.
+- Real artifact/PostgreSQL integration and migration checks: 5 passed.
+- Generic service boundary is covered by `test_application_services_remain_source_neutral`.
 
 ### P0-12 — Normalize PEP content without losing evidence locators
 
@@ -72,13 +125,14 @@ Owner role: backend
 Assignee: unassigned
 Priority: P1
 Status: planned
-Depends on: `P0-11`
+Depends on: `P0-11A`
 Product: `PROD-P0-01`
 
 #### Goal
 
-Produce a deterministic normalized PEP artifact that later extraction can use
-while retaining a verifiable path back to the exact admitted source bytes.
+Produce a deterministic normalized reference-source artifact that later
+extraction can use while retaining a verifiable path back to the exact
+admitted source bytes.
 
 #### Requirements
 
@@ -112,8 +166,8 @@ For every scheduled follow-up, the coordinator first confirms the dependency is
 accepted, then changes only that card to `ready`. An implementer claims exactly
 that card, moves it to `review` with verification evidence, and leaves
 acceptance and archival to a separate reviewer. The immediate backend order is
-`P0-11`, then `P0-12`; no later card is assigned while its dependency remains
-unaccepted.
+`P0-11`, then `P0-11A`, then `P0-12`; no later card is assigned while its
+dependency remains unaccepted.
 
 ## Recently completed
 

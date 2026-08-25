@@ -17,6 +17,9 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Source-neutral acquired-content and persistence contracts keep PEP-specific
+  validation in the reference source adapter while preserving generic artifact
+  and immutable-version recovery behavior.
 - Artifact-first persistence of exact admitted PEP bytes with atomic
   SHA-256-addressed filesystem storage, immutable PostgreSQL manifests,
   observation and optional upstream revision metadata, idempotent retries, and

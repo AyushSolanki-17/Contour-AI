@@ -1,4 +1,4 @@
-"""Deterministic PEP source preflight and acquisition contracts."""
+"""Deterministic PEP source preflight and acquisition adapter."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Protocol
 
+from contour.domain.acquired_content import AcquiredContent
 from contour.domain.source import Source, SourceId
 from contour.domain.source_version import ContentDigest
 from contour.domain.time_point import TimePoint
@@ -17,7 +18,7 @@ _MAX_PEP_CONTENT_BYTES = 2 * 1024 * 1024
 
 
 class PepSourceValidationError(ApplicationError):
-    """Raised when a source is outside the supported PEP admission boundary."""
+    """Raised when a source is outside the supported public PEP boundary."""
 
     def __init__(self) -> None:
         """Create a safe invalid-configuration error."""
@@ -39,7 +40,7 @@ class PepSourceUnavailableError(ApplicationError):
 
 
 class PepSourceTimeoutError(ApplicationError):
-    """Raised when acquisition exceeds its configured source-operation limit."""
+    """Raised when acquisition exceeds its configured operation limit."""
 
     def __init__(self) -> None:
         """Create a safe timeout error."""
@@ -50,7 +51,7 @@ class PepSourceMalformedContentError(ApplicationError):
     """Raised when acquired bytes are not a usable PEP document."""
 
     def __init__(self) -> None:
-        """Create a safe malformed-content error without including source bytes."""
+        """Create a safe malformed-content error without source bytes."""
         super().__init__(
             code="source.malformed_content",
             message="The acquired PEP content is malformed or unsupported.",
@@ -58,10 +59,10 @@ class PepSourceMalformedContentError(ApplicationError):
 
 
 class PepSourceIntegrityError(ApplicationError):
-    """Raised when acquired bytes do not match the fixture's declared digest."""
+    """Raised when acquired bytes do not match their declared digest."""
 
     def __init__(self) -> None:
-        """Create a safe integrity error without including content or digests."""
+        """Create a safe integrity error without exposing content or digests."""
         super().__init__(
             code="source.integrity_failed",
             message="The acquired PEP content failed its integrity check.",
@@ -69,12 +70,12 @@ class PepSourceIntegrityError(ApplicationError):
 
 
 class PepFixtureUnavailableError(Exception):
-    """Signals that a deterministic fixture does not contain the requested PEP."""
+    """Signals that a deterministic fixture lacks the requested PEP."""
 
 
 @dataclass(frozen=True, slots=True)
 class PepSourceConfiguration:
-    """Validated public PEP configuration accepted by the acquisition boundary."""
+    """Validated public PEP configuration accepted by the source adapter."""
 
     source_id: SourceId
     pep_number: int
@@ -83,7 +84,7 @@ class PepSourceConfiguration:
 
 @dataclass(frozen=True, slots=True)
 class PepAcquiredContent:
-    """Provider-neutral bytes and metadata returned by one PEP source adapter."""
+    """Provider payload returned by one PEP source implementation."""
 
     content: bytes
     expected_digest: ContentDigest
@@ -91,19 +92,8 @@ class PepAcquiredContent:
     revision_time: TimePoint
 
 
-@dataclass(frozen=True, slots=True)
-class PepAcquisition:
-    """Validated PEP bytes with stable content identity and upstream metadata."""
-
-    configuration: PepSourceConfiguration
-    content: bytes
-    content_digest: ContentDigest
-    upstream_revision: str | None
-    revision_time: TimePoint
-
-
 class PepContentAcquirer(Protocol):
-    """Obtains bytes for a configuration that has already passed preflight."""
+    """Obtains bytes for a configuration that passed source preflight."""
 
     def acquire(self, configuration: PepSourceConfiguration) -> PepAcquiredContent:
         """Return pinned PEP bytes or raise an adapter-specific availability error."""
@@ -131,15 +121,15 @@ class PepPreflightService:
 
 
 class PepAcquisitionService:
-    """Acquires and validates deterministic PEP content through a narrow port."""
+    """Acquires validated PEP content and returns the generic source contract."""
 
     def __init__(self, preflight: PepPreflightService, acquirer: PepContentAcquirer) -> None:
-        """Initialize the service with explicit validation and source dependencies."""
+        """Initialize the adapter with explicit validation and source dependencies."""
         self._preflight = preflight
         self._acquirer = acquirer
 
-    def acquire(self, source: Source) -> PepAcquisition:
-        """Return validated, integrity-checked PEP content for a supported source.
+    def acquire(self, source: Source, *, observed_at: TimePoint) -> AcquiredContent:
+        """Return validated exact PEP bytes with source-neutral provenance.
 
         Raises:
             PepSourceValidationError: If source configuration is unsupported.
@@ -160,17 +150,18 @@ class PepAcquisitionService:
         if content_digest != acquired.expected_digest:
             raise PepSourceIntegrityError()
         _validate_pep_content(acquired.content, configuration.pep_number)
-        return PepAcquisition(
-            configuration,
+        return AcquiredContent(
+            source.id,
             acquired.content,
             content_digest,
+            observed_at,
             acquired.upstream_revision,
             acquired.revision_time,
         )
 
 
 def _validate_pep_content(content: bytes, pep_number: int) -> None:
-    """Reject oversized, non-text, or non-PEP fixture content without exposing it."""
+    """Reject oversized, non-text, or non-PEP fixture content."""
     if not content or len(content) > _MAX_PEP_CONTENT_BYTES:
         raise PepSourceMalformedContentError()
     try:

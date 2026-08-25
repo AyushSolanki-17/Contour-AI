@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from contour.domain.source_version import ContentDigest
 from contour.domain.time_point import TimePoint
-from contour.services.pep_acquisition import (
+from contour.infrastructure.source.pep import (
     PepAcquiredContent,
     PepFixtureUnavailableError,
     PepSourceConfiguration,

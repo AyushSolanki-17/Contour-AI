@@ -8,9 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from contour.domain import ContentDigest, Source, SourceId, TimePoint, WorkspaceId
-from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
-from contour.services.pep_acquisition import (
+from contour.domain import AcquiredContent, ContentDigest, Source, SourceId, TimePoint, WorkspaceId
+from contour.infrastructure.source.pep import (
     PepAcquiredContent,
     PepAcquisitionService,
     PepPreflightService,
@@ -20,6 +19,7 @@ from contour.services.pep_acquisition import (
     PepSourceUnavailableError,
     PepSourceValidationError,
 )
+from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
 
 _FIXTURE_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "pep_0723.html"
 _FIXTURE_DIGEST = "4e8af3f49e41dc047b7b5f583b324c6983b0730dfe8ec45e4d47c6ee0b2ebb5b"
@@ -63,10 +63,14 @@ def _service(
 
 
 def test_pinned_fixture_acquisition_is_deterministic_and_retains_revision_metadata() -> None:
-    first = _service().acquire(_source())
-    second = _service().acquire(_source())
+    observed_at = TimePoint(datetime(2026, 8, 25, 8, 0, tzinfo=UTC))
+    first = _service().acquire(_source(), observed_at=observed_at)
+    second = _service().acquire(_source(), observed_at=observed_at)
 
     assert first == second
+    assert isinstance(first, AcquiredContent)
+    assert first.source_id == _source().id
+    assert first.observed_at == observed_at
     assert first.content_digest.value == _FIXTURE_DIGEST
     assert first.upstream_revision == "pep-723-fixture-r1"
     assert first.revision_time.is_known
@@ -74,7 +78,10 @@ def test_pinned_fixture_acquisition_is_deterministic_and_retains_revision_metada
 
 def test_preflight_rejects_invalid_configuration_before_fixture_lookup() -> None:
     with pytest.raises(PepSourceValidationError):
-        _service().acquire(_source(canonical_locator="https://example.invalid/pep-0723/"))
+        _service().acquire(
+            _source(canonical_locator="https://example.invalid/pep-0723/"),
+            observed_at=TimePoint(datetime(2026, 8, 25, 8, 0, tzinfo=UTC)),
+        )
 
 
 @pytest.mark.parametrize(
@@ -99,6 +106,6 @@ def test_acquisition_classifies_failures_without_exposing_content(
     service: PepAcquisitionService, error_type: type[Exception]
 ) -> None:
     with pytest.raises(error_type) as error:
-        service.acquire(_source())
+        service.acquire(_source(), observed_at=TimePoint(datetime(2026, 8, 25, 8, 0, tzinfo=UTC)))
 
     assert "PEP 723" not in str(error.value)

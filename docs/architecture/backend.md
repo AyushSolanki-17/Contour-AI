@@ -60,8 +60,9 @@ are stable even while new capabilities are added:
 | `settings.py` | validated process configuration values and startup configuration failures | service behavior, provider calls, or resource construction |
 
 Source-specific acquisition belongs in infrastructure such as
-`infrastructure/sources/pep/`; its orchestration belongs in a capability-named
-service such as `services/ingestion_service.py`. PostgreSQL search, catalog,
+`infrastructure/source/pep.py`; its durable orchestration belongs in a
+capability-named service such as `services/source_persistence.py`. PostgreSQL
+search, catalog,
 knowledge, and execution code remain peer capabilities below
 `infrastructure/postgres/`. The repository does not create these modules before
 the corresponding behavior exists.
@@ -96,7 +97,7 @@ src/contour/
     health_service.py             framework-neutral health use cases
     catalog_service.py            atomic catalog admission use case
     catalog_errors.py             safe catalog failure contracts
-    pep_persistence.py            artifact-first immutable PEP admission
+    source_persistence.py         artifact-first immutable source admission
   repositories/
     artifact.py                    exact content-addressed artifact port
     workspace.py                  workspace persistence port
@@ -107,6 +108,8 @@ src/contour/
   infrastructure/
     artifact/
       filesystem.py               atomic SHA-256 filesystem artifacts
+    source/
+      pep.py                      reference PEP preflight and acquisition
     postgres/
       engine.py                   process-scoped engine and pool policy
       readiness.py                PostgreSQL health implementation

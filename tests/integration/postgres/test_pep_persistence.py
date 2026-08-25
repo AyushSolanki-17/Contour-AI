@@ -16,6 +16,7 @@ from alembic.config import Config
 from psycopg import sql
 
 from contour.domain import (
+    AcquiredContent,
     ContentDigest,
     Source,
     SourceId,
@@ -30,6 +31,7 @@ from contour.infrastructure.postgres.catalog_transaction import (
 )
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.tables.catalog import source_versions
+from contour.infrastructure.source.pep import PepAcquisitionService, PepPreflightService
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
 from contour.repositories.artifact import ArtifactWriteState
 from contour.services.artifact_errors import (
@@ -38,12 +40,7 @@ from contour.services.artifact_errors import (
     ArtifactPersistenceError,
 )
 from contour.services.catalog_errors import CatalogConflictError, CatalogReferenceError
-from contour.services.pep_acquisition import (
-    PepAcquisition,
-    PepAcquisitionService,
-    PepPreflightService,
-)
-from contour.services.pep_persistence import PepPersistenceService
+from contour.services.source_persistence import SourcePersistenceService
 from contour.settings import DatabaseSettings, Settings
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -79,7 +76,7 @@ def _acquire(
     *,
     upstream_revision: str | None,
     revision_time: TimePoint,
-) -> PepAcquisition:
+) -> AcquiredContent:
     """Admit deterministic bytes through the accepted PEP acquisition boundary."""
     digest = ContentDigest(sha256(content).hexdigest())
     fixture = PinnedPepFixture(
@@ -90,7 +87,7 @@ def _acquire(
         revision_time,
     )
     service = PepAcquisitionService(PepPreflightService(), PepFixtureSourceAdapter((fixture,)))
-    return service.acquire(source)
+    return service.acquire(source, observed_at=TimePoint(datetime(2026, 8, 25, 8, 0, tzinfo=UTC)))
 
 
 @pytest.mark.integration
@@ -127,7 +124,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                 transaction.sources.save_source(pep_723)
 
             artifact_repository = FileSystemArtifactRepository(tmp_path / "artifacts")
-            service = PepPersistenceService(artifact_repository, manager)
+            service = SourcePersistenceService(artifact_repository, manager)
             fixture_content = _FIXTURE_PATH.read_bytes()
             acquisition = _acquire(
                 pep_723,
@@ -138,8 +135,8 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             first_observation = TimePoint(datetime(2026, 8, 25, 8, 0, tzinfo=UTC))
             later_observation = TimePoint(datetime(2026, 8, 25, 9, 0, tzinfo=UTC))
 
-            first = service.persist(acquisition, observed_at=first_observation)
-            repeated = service.persist(acquisition, observed_at=later_observation)
+            first = service.persist(acquisition)
+            repeated = service.persist(replace(acquisition, observed_at=later_observation))
 
             assert first.artifact_state is ArtifactWriteState.CREATED
             assert repeated.artifact_state is ArtifactWriteState.UNCHANGED
@@ -161,7 +158,6 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             with pytest.raises(CatalogConflictError):
                 service.persist(
                     replace(acquisition, upstream_revision="conflicting-revision"),
-                    observed_at=later_observation,
                 )
 
             changed_content = b"<html><body><h1>PEP 723 changed</h1></body></html>"
@@ -172,7 +168,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                 revision_time=acquisition.revision_time,
             )
             with pytest.raises(CatalogConflictError):
-                service.persist(changed_acquisition, observed_at=later_observation)
+                service.persist(changed_acquisition)
             with manager.transaction() as transaction:
                 assert (
                     transaction.source_versions.get_source_version(
@@ -185,18 +181,12 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             artifact_path.unlink()
             with pytest.raises(ArtifactNotFoundError):
                 artifact_repository.retrieve(acquisition.content_digest)
-            assert (
-                service.persist(acquisition, observed_at=later_observation).artifact_state
-                is ArtifactWriteState.CREATED
-            )
+            assert service.persist(acquisition).artifact_state is ArtifactWriteState.CREATED
 
             artifact_path.write_bytes(b"corrupt artifact")
             with pytest.raises(ArtifactIntegrityError):
                 artifact_repository.retrieve(acquisition.content_digest)
-            assert (
-                service.persist(acquisition, observed_at=later_observation).artifact_state
-                is ArtifactWriteState.REPAIRED
-            )
+            assert service.persist(acquisition).artifact_state is ArtifactWriteState.REPAIRED
             assert artifact_repository.retrieve(acquisition.content_digest) == fixture_content
 
             pep_724 = _source(workspace.id, 724)
@@ -207,7 +197,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                 revision_time=TimePoint(datetime(2026, 8, 24, 1, 0, tzinfo=UTC)),
             )
             with pytest.raises(CatalogReferenceError):
-                service.persist(acquisition_724, observed_at=first_observation)
+                service.persist(acquisition_724)
             assert (
                 artifact_repository.retrieve(acquisition_724.content_digest)
                 == acquisition_724.content
@@ -221,7 +211,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                     is None
                 )
                 transaction.sources.save_source(pep_724)
-            recovered_724 = service.persist(acquisition_724, observed_at=first_observation)
+            recovered_724 = service.persist(acquisition_724)
             assert recovered_724.artifact_state is ArtifactWriteState.UNCHANGED
 
             pep_725 = _source(workspace.id, 725)
@@ -235,11 +225,11 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             )
             blocked_root = tmp_path / "blocked-artifact-root"
             blocked_root.write_text("not a directory", encoding="utf-8")
-            blocked_service = PepPersistenceService(
+            blocked_service = SourcePersistenceService(
                 FileSystemArtifactRepository(blocked_root), manager
             )
             with pytest.raises(ArtifactPersistenceError):
-                blocked_service.persist(acquisition_725, observed_at=first_observation)
+                blocked_service.persist(acquisition_725)
             with manager.transaction() as transaction:
                 assert (
                     transaction.source_versions.get_source_version(
@@ -248,7 +238,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                     is None
                 )
 
-            recovered_725 = service.persist(acquisition_725, observed_at=first_observation)
+            recovered_725 = service.persist(acquisition_725)
             assert recovered_725.version.upstream_revision is None
             assert not recovered_725.version.revision_time.is_known
             with engine.connect() as connection:

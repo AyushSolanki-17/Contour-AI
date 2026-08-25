@@ -128,6 +128,20 @@ def test_infrastructure_initializers_do_not_hide_implementation_imports() -> Non
     assert violations == []
 
 
+def test_application_services_remain_source_neutral() -> None:
+    """PEP policy stays in source infrastructure, not reusable services."""
+    services_root = _PACKAGE_ROOT / "services"
+    violations: list[str] = []
+    for path in sorted(services_root.rglob("*.py")):
+        if "pep" in path.stem.lower():
+            violations.append(str(path.relative_to(_PACKAGE_ROOT)))
+        source = path.read_text(encoding="utf-8")
+        if "Pep" in source or "pep_" in source:
+            violations.append(str(path.relative_to(_PACKAGE_ROOT)))
+
+    assert violations == []
+
+
 def test_runtime_code_does_not_mutate_database_schema() -> None:
     """Alembic remains an explicit release tool rather than a runtime dependency."""
     violations: list[str] = []

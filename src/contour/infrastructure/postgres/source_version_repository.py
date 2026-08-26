@@ -22,6 +22,7 @@ class PostgresSourceVersionRepository:
     def get_source_version(self, version_id: SourceVersionId) -> SourceVersion | None:
         """Return an immutable source version by content identity."""
         statement = select(
+            source_versions.c.observed_at,
             source_versions.c.upstream_revision,
             source_versions.c.source_time,
             source_versions.c.revision_time,
@@ -37,6 +38,7 @@ class PostgresSourceVersionRepository:
             version_id,
             version_id.source_id,
             version_id.content_digest,
+            TimePoint(cast(datetime | None, row["observed_at"])),
             cast(str | None, row["upstream_revision"]),
             TimePoint(cast(datetime | None, row["source_time"])),
             TimePoint(cast(datetime | None, row["revision_time"])),
@@ -48,6 +50,8 @@ class PostgresSourceVersionRepository:
             source_namespace=version.source_id.namespace,
             source_value=version.source_id.value,
             content_digest=version.content_digest.value,
+            observed_at=version.observed_at.value,
+            observation_time_unknown=not version.observed_at.is_known,
             upstream_revision=version.upstream_revision,
             source_time=version.source_time.value,
             revision_time=version.revision_time.value,

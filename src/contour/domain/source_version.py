@@ -72,6 +72,7 @@ class SourceVersion:
     id: SourceVersionId
     source_id: SourceId
     content_digest: ContentDigest
+    observed_at: TimePoint
     upstream_revision: str | None
     source_time: TimePoint
     revision_time: TimePoint
@@ -88,6 +89,8 @@ class SourceVersion:
             raise ValueError("source version id must reference the supplied source_id")
         if self.id.content_digest != self.content_digest:
             raise ValueError("source version id must reference the supplied content_digest")
+        if not isinstance(self.observed_at, TimePoint):
+            raise TypeError("observed_at must be a TimePoint")
         object.__setattr__(
             self,
             "upstream_revision",
@@ -104,6 +107,7 @@ class SourceVersion:
             "id": str(self.id),
             "source_id": str(self.source_id),
             "content_digest": str(self.content_digest),
+            "observed_at": self.observed_at.to_primitive(),
             "upstream_revision": self.upstream_revision,
             "source_time": self.source_time.to_primitive(),
             "revision_time": self.revision_time.to_primitive(),

@@ -43,6 +43,13 @@ source_versions = sa.Table(
     sa.Column("source_namespace", sa.Text(), nullable=False),
     sa.Column("source_value", sa.Text(), nullable=False),
     sa.Column("content_digest", sa.String(length=64), nullable=False),
+    sa.Column("observed_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column(
+        "observation_time_unknown",
+        sa.Boolean(),
+        nullable=False,
+        server_default=sa.false(),
+    ),
     sa.Column("upstream_revision", sa.Text(), nullable=True),
     sa.Column("source_time", sa.DateTime(timezone=True), nullable=True),
     sa.Column("revision_time", sa.DateTime(timezone=True), nullable=True),
@@ -53,6 +60,10 @@ source_versions = sa.Table(
         ["source_namespace", "source_value"],
         ["sources.namespace", "sources.value"],
         name="fk_source_versions_source",
+    ),
+    sa.CheckConstraint(
+        "(observed_at IS NULL) = observation_time_unknown",
+        name="ck_source_versions_observed_at",
     ),
 )
 sa.Index(

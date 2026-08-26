@@ -39,9 +39,15 @@ format; it does not replace the content identity.
 
 Evidence locators always carry this source-version identity. They can identify
 a structured field (such as `header:Replaces`) and, when byte offsets are
-available, a non-empty half-open byte span. The acquisition slice will specify
-the byte canonicalization and artifact-storage policy; until then, the digest
-means SHA-256 over the exact admitted bytes.
+available, a non-empty half-open byte span. Phase 0 applies no byte
+canonicalization before raw persistence: the digest is SHA-256 over the exact
+admitted bytes and is also the content-addressed artifact reference. The
+filesystem implementation maps it to
+`sha256/<first-two-hex-characters>/<remaining-hex-characters>` beneath its
+configured root; other implementations must preserve the same digest contract.
+The manifest retains the first accepted observation time. Seeing the same
+content again returns that immutable version rather than overwriting when it was
+first observed.
 
 ## Evidence and provenance
 

@@ -42,6 +42,8 @@ class SourcePersistenceService:
 
         Raises:
             TypeError: If the input is not source-neutral acquired content.
+            ArtifactIntegrityError: If artifact content fails digest verification.
+            ArtifactPersistenceError: If artifact persistence cannot finish safely.
             CatalogConflictError: If accepted metadata would be rewritten.
             CatalogPersistenceError: If PostgreSQL persistence fails.
             CatalogReferenceError: If the logical source is not accepted.

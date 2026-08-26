@@ -128,3 +128,30 @@ curl --fail http://127.0.0.1:8000/health/ready
 When PostgreSQL is unavailable, `/health/ready` returns HTTP 503 with the
 stable `dependency.unavailable` error code. It does not expose connection or
 credential details.
+
+## Trusted-local workspace and source API
+
+The versioned product API currently creates and opens workspaces and registers
+supported logical sources. Callers choose canonical, namespaced identifiers;
+an exact repeated `PUT` returns the accepted resource, while reusing an identity
+with different fields returns HTTP 409 without changing it. The initial local
+profile records `local-operator` as the workspace owner and publishes no
+authentication or authorization behavior.
+
+```shell
+curl --fail-with-body --request PUT \
+  http://127.0.0.1:8000/api/v1/workspaces/WORKSPACE:maintainers \
+  --header 'content-type: application/json' \
+  --data '{"name":"Maintainers"}'
+
+curl --fail-with-body --request PUT \
+  http://127.0.0.1:8000/api/v1/workspaces/WORKSPACE:maintainers/sources/SOURCE:PEP:723 \
+  --header 'content-type: application/json' \
+  --data '{"source_type":"pep","canonical_locator":"https://peps.python.org/pep-0723/","scope":"public","license":"PSF-2.0","data_classification":"public"}'
+```
+
+The corresponding `GET` paths return the accepted representations. A source is
+visible only below its owning workspace. Invalid requests, missing resources,
+identity conflicts, unsupported source configurations, and unavailable durable
+storage use the common error envelope documented in the generated
+[`openapi/contour.openapi.json`](openapi/contour.openapi.json) contract.

@@ -5,13 +5,17 @@ from __future__ import annotations
 from http import HTTPStatus
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from contour.api.schemas.error import ErrorBody, ErrorResponse
+from contour.api.schemas.error import ErrorBody, ErrorDetail, ErrorResponse
 from contour.services.error import ApplicationError
 
 _HTTP_STATUS_BY_ERROR_CODE = {
     "dependency.unavailable": HTTPStatus.SERVICE_UNAVAILABLE,
+    "resource.conflict": HTTPStatus.CONFLICT,
+    "resource.not_found": HTTPStatus.NOT_FOUND,
+    "source.unsupported": HTTPStatus.UNPROCESSABLE_ENTITY,
 }
 
 
@@ -38,4 +42,32 @@ def register_exception_handlers(app: FastAPI) -> None:
             HTTPStatus.INTERNAL_SERVER_ERROR,
         )
         response = ErrorResponse(error=ErrorBody(code=error.code, message=error.message))
-        return JSONResponse(status_code=status_code, content=response.model_dump(mode="json"))
+        return JSONResponse(
+            status_code=status_code,
+            content=response.model_dump(mode="json", exclude_none=True),
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_error_handler(
+        _request: Request,
+        error: RequestValidationError,
+    ) -> JSONResponse:
+        """Return safe field-level details through the common error envelope."""
+        details = tuple(
+            ErrorDetail(
+                field=".".join(str(component) for component in item["loc"]),
+                message=str(item["msg"]),
+            )
+            for item in error.errors()
+        )
+        response = ErrorResponse(
+            error=ErrorBody(
+                code="request.invalid",
+                message="The request is invalid.",
+                details=details,
+            )
+        )
+        return JSONResponse(
+            status_code=HTTPStatus.BAD_REQUEST,
+            content=response.model_dump(mode="json", exclude_none=True),
+        )

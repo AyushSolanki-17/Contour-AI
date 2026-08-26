@@ -120,6 +120,22 @@ class PepPreflightService:
         return PepSourceConfiguration(source.id, pep_number, canonical_locator)
 
 
+class PepSourceRegistrationPolicy:
+    """Reports whether a logical source matches the supported PEP boundary."""
+
+    def __init__(self, preflight: PepPreflightService | None = None) -> None:
+        """Initialize the policy with the deterministic PEP validator."""
+        self._preflight = preflight or PepPreflightService()
+
+    def supports(self, source: Source) -> bool:
+        """Return whether the source can be registered for the PEP adapter."""
+        try:
+            self._preflight.preflight(source)
+        except PepSourceValidationError:
+            return False
+        return True
+
+
 class PepAcquisitionService:
     """Acquires validated PEP content and returns the generic source contract."""
 

@@ -9,10 +9,13 @@ from fastapi import FastAPI
 from sqlalchemy import Engine
 
 from contour.api.app import AppLifespan, create_app
+from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.readiness import PostgresReadinessProbe
+from contour.infrastructure.source.pep import PepSourceRegistrationPolicy
 from contour.observability.logging import configure_logging
 from contour.services.health_service import HealthService, ReadinessProbe
+from contour.services.workspace_source_service import WorkspaceSourceService
 from contour.settings import Settings
 
 
@@ -30,13 +33,19 @@ def create_http_app(
         A fully composed HTTP application.
     """
     configure_logging(secrets=settings.database.redaction_values)
-    if readiness_probe is not None:
-        return create_app(health_service=HealthService(readiness_probe))
-
     engine = create_postgres_engine(settings.database)
-    probe = PostgresReadinessProbe(engine)
+    probe = readiness_probe or PostgresReadinessProbe(engine)
     health_service = HealthService(probe)
-    return create_app(health_service=health_service, lifespan=_database_lifespan(engine))
+    workspace_source_service = WorkspaceSourceService(
+        PostgresCatalogTransactionManager(engine),
+        (PepSourceRegistrationPolicy(),),
+        local_owner="local-operator",
+    )
+    return create_app(
+        health_service=health_service,
+        workspace_source_service=workspace_source_service,
+        lifespan=_database_lifespan(engine),
+    )
 
 
 def _database_lifespan(engine: Engine) -> AppLifespan:

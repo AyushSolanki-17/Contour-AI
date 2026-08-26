@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 
 from contour.api.app import create_app
+from contour.infrastructure.source.pep import PepSourceRegistrationPolicy
+from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.services.health_service import HealthService
+from contour.services.workspace_source_service import WorkspaceSourceService
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "openapi" / "contour.openapi.json"
@@ -20,13 +23,29 @@ class ContractReadinessProbe:
         """Satisfy the health-service contract without touching a database."""
 
 
+class ContractTransactionManager:
+    """Provide a schema-only dependency that cannot perform runtime I/O."""
+
+    def transaction(self) -> CatalogUnitOfWork:
+        """Reject execution because OpenAPI generation never invokes product routes."""
+        raise RuntimeError("contract generation cannot execute catalog operations")
+
+
 def render_contract() -> str:
     """Render the current FastAPI contract as deterministic JSON.
 
     Returns:
         Canonical OpenAPI JSON with a trailing newline.
     """
-    app = create_app(health_service=HealthService(ContractReadinessProbe()))
+    workspace_source_service = WorkspaceSourceService(
+        ContractTransactionManager(),
+        (PepSourceRegistrationPolicy(),),
+        local_owner="local-operator",
+    )
+    app = create_app(
+        health_service=HealthService(ContractReadinessProbe()),
+        workspace_source_service=workspace_source_service,
+    )
     return json.dumps(app.openapi(), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 

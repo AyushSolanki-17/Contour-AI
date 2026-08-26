@@ -97,6 +97,7 @@ src/contour/
     health_service.py             framework-neutral health use cases
     catalog_service.py            atomic catalog admission use case
     catalog_errors.py             safe catalog failure contracts
+    workspace_source_service.py   idempotent workspace/source product use cases
     source_persistence.py         artifact-first immutable source admission
   repositories/
     artifact.py                    exact content-addressed artifact port
@@ -338,9 +339,11 @@ removal path before adding that dependency. Singleton support alone is not a
 reason to add a container.
 
 The HTTP composition root currently creates one SQLAlchemy engine and connection
-pool for the process, injects it into PostgreSQL infrastructure, and disposes it through
-FastAPI lifespan handling. This is ordinary constructor injection; a third-party
-DI container is intentionally deferred because the graph has no conditional or
+pool for the process, injects it into PostgreSQL readiness and catalog
+infrastructure, composes the trusted-local workspace/source service with the
+supported PEP registration policy, and disposes the engine through FastAPI
+lifespan handling. This is ordinary constructor injection; a third-party DI
+container is intentionally deferred because the graph has no conditional or
 plugin-driven bindings that justify another runtime dependency.
 
 ## Data ownership
@@ -360,6 +363,10 @@ them atomically before the immutable manifest is returned.
 The [knowledge model](knowledge-model.md) controls meaning independently of physical tables.
 
 ## Initial service contracts
+
+The implemented public product subset creates and gets one workspace and
+registers and gets one nested logical source. Remaining bullets describe the
+ordered Phase 0 service boundary rather than currently published HTTP paths:
 
 - create, list, and get workspaces;
 - validate, add, list, and get sources;

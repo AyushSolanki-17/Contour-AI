@@ -7,6 +7,7 @@ from typing import cast
 from sqlalchemy import Connection, insert, select
 
 from contour.domain.source import Source, SourceId
+from contour.domain.tenant import TenantId
 from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import sources
 
@@ -29,6 +30,7 @@ class PostgresSourceRepository:
             return None
         return Source(
             SourceId(cast(str, row["namespace"]), cast(str, row["value"])),
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
             WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             cast(str, row["canonical_locator"]),
             cast(str, row["source_type"]),
@@ -42,6 +44,8 @@ class PostgresSourceRepository:
         statement = insert(sources).values(
             namespace=source.id.namespace,
             value=source.id.value,
+            tenant_namespace=source.tenant_id.namespace,
+            tenant_value=source.tenant_id.value,
             workspace_namespace=source.workspace_id.namespace,
             workspace_value=source.workspace_id.value,
             canonical_locator=source.canonical_locator,

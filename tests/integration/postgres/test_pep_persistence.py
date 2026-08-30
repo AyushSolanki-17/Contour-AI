@@ -21,6 +21,8 @@ from contour.domain import (
     Source,
     SourceId,
     SourceVersionId,
+    Tenant,
+    TenantId,
     TimePoint,
     Workspace,
     WorkspaceId,
@@ -57,10 +59,11 @@ def _alembic_config() -> Config:
     return Config(str(_REPOSITORY_ROOT / "alembic.ini"))
 
 
-def _source(workspace_id: WorkspaceId, pep_number: int) -> Source:
+def _source(tenant_id: TenantId, workspace_id: WorkspaceId, pep_number: int) -> Source:
     """Create one supported public PEP source."""
     return Source(
         SourceId("SOURCE:PEP", str(pep_number)),
+        tenant_id,
         workspace_id,
         f"https://peps.python.org/pep-{pep_number:04d}/",
         "pep",
@@ -117,9 +120,13 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                 )
             )
             manager = PostgresCatalogTransactionManager(engine)
-            workspace = Workspace(WorkspaceId("WORKSPACE", "pep-ingestion"), "PEPs", "maintainer")
-            pep_723 = _source(workspace.id, 723)
+            tenant = Tenant(TenantId("TENANT", "pep-ingestion"), "PEP ingestion")
+            workspace = Workspace(
+                WorkspaceId("WORKSPACE", "pep-ingestion"), tenant.id, "PEPs", "maintainer"
+            )
+            pep_723 = _source(tenant.id, workspace.id, 723)
             with manager.transaction() as transaction:
+                transaction.tenants.save_tenant(tenant)
                 transaction.workspaces.save_workspace(workspace)
                 transaction.sources.save_source(pep_723)
 
@@ -189,7 +196,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             assert service.persist(acquisition).artifact_state is ArtifactWriteState.REPAIRED
             assert artifact_repository.retrieve(acquisition.content_digest) == fixture_content
 
-            pep_724 = _source(workspace.id, 724)
+            pep_724 = _source(tenant.id, workspace.id, 724)
             acquisition_724 = _acquire(
                 pep_724,
                 b"<html><body><h1>PEP 724</h1></body></html>",
@@ -214,7 +221,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             recovered_724 = service.persist(acquisition_724)
             assert recovered_724.artifact_state is ArtifactWriteState.UNCHANGED
 
-            pep_725 = _source(workspace.id, 725)
+            pep_725 = _source(tenant.id, workspace.id, 725)
             with manager.transaction() as transaction:
                 transaction.sources.save_source(pep_725)
             acquisition_725 = _acquire(

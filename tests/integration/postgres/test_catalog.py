@@ -29,6 +29,8 @@ from contour.domain import (
     SourceId,
     SourceVersion,
     SourceVersionId,
+    Tenant,
+    TenantId,
     TimePoint,
     Workspace,
     WorkspaceId,
@@ -58,11 +60,15 @@ def _alembic_config() -> Config:
     return Config(str(_REPOSITORY_ROOT / "alembic.ini"))
 
 
-def _catalog_records() -> tuple[Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator]:
+def _catalog_records() -> tuple[
+    Tenant, Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator
+]:
     """Create one catalog admission set with a known and an unknown time."""
-    workspace = Workspace(WorkspaceId("WORKSPACE", "test"), "Test", "maintainer")
+    tenant = Tenant(TenantId("TENANT", "test"), "Test tenant")
+    workspace = Workspace(WorkspaceId("WORKSPACE", "test"), tenant.id, "Test", "maintainer")
     source = Source(
         SourceId("SOURCE:PEP", "723"),
+        tenant.id,
         workspace.id,
         "https://peps.python.org/pep-0723/",
         "pep",
@@ -73,6 +79,8 @@ def _catalog_records() -> tuple[Workspace, Source, SourceVersion, EvidenceId, Ev
     digest = ContentDigest("a" * 64)
     version = SourceVersion(
         SourceVersionId(source.id, digest),
+        tenant.id,
+        workspace.id,
         source.id,
         digest,
         TimePoint(datetime(2026, 8, 20, 13, 0, tzinfo=UTC)),
@@ -81,8 +89,8 @@ def _catalog_records() -> tuple[Workspace, Source, SourceVersion, EvidenceId, Ev
         TimePoint(datetime(2026, 8, 19, 10, 30, tzinfo=UTC)),
     )
     evidence_id = EvidenceId("EVIDENCE", "pep-723-replaces")
-    evidence = EvidenceLocator(version.id, "header:Replaces", 10, 23)
-    return workspace, source, version, evidence_id, evidence
+    evidence = EvidenceLocator(tenant.id, workspace.id, version.id, "header:Replaces", 10, 23)
+    return tenant, workspace, source, version, evidence_id, evidence
 
 
 @pytest.mark.integration
@@ -111,8 +119,9 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                 )
             )
             manager = PostgresCatalogTransactionManager(engine)
-            workspace, source, version, evidence_id, evidence = _catalog_records()
+            tenant, workspace, source, version, evidence_id, evidence = _catalog_records()
             CatalogAdmissionService(manager).admit(
+                tenant=tenant,
                 workspace=workspace,
                 source=source,
                 version=version,
@@ -151,6 +160,8 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                     transaction.source_versions.save_source_version(
                         SourceVersion(
                             SourceVersionId(source.id, conflicting_digest),
+                            tenant.id,
+                            workspace.id,
                             source.id,
                             conflicting_digest,
                             version.observed_at,
@@ -165,6 +176,8 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                     transaction.evidence.save_evidence(
                         EvidenceId("EVIDENCE", "orphan"),
                         EvidenceLocator(
+                            tenant.id,
+                            workspace.id,
                             SourceVersionId(source.id, ContentDigest("b" * 64)),
                             "header:Replaces",
                         ),
@@ -209,7 +222,7 @@ def test_failed_catalog_transaction_rolls_back_all_prior_writes(
                 )
             )
             manager = PostgresCatalogTransactionManager(engine)
-            workspace, source, _, _, _ = _catalog_records()
+            tenant, workspace, source, _, _, _ = _catalog_records()
 
             with pytest.raises(CatalogReferenceError):
                 with manager.transaction() as transaction:
@@ -217,6 +230,7 @@ def test_failed_catalog_transaction_rolls_back_all_prior_writes(
                     transaction.sources.save_source(
                         Source(
                             source.id,
+                            tenant.id,
                             WorkspaceId("WORKSPACE", "missing"),
                             source.canonical_locator,
                             source.source_type,
@@ -268,8 +282,9 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                 )
             )
             catalog_manager = PostgresCatalogTransactionManager(engine)
-            workspace, source, version, evidence_id, locator = _catalog_records()
+            tenant, workspace, source, version, evidence_id, locator = _catalog_records()
             CatalogAdmissionService(catalog_manager).admit(
+                tenant=tenant,
                 workspace=workspace,
                 source=source,
                 version=version,
@@ -279,6 +294,7 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
 
             entity_a = Entity(
                 EntityId("PEP", "723"),
+                tenant.id,
                 workspace.id,
                 "PEP 723",
                 (evidence_id,),
@@ -287,6 +303,7 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
             )
             entity_b = Entity(
                 EntityId("PEP", "722"),
+                tenant.id,
                 workspace.id,
                 "PEP 722",
                 (evidence_id,),
@@ -295,6 +312,7 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
             )
             relationship = Relationship(
                 RelationshipId("RELATIONSHIP", "pep-723-replaces-722"),
+                tenant.id,
                 workspace.id,
                 entity_a.id,
                 "replaces",
@@ -303,12 +321,28 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                 TimePoint.unknown(),
                 TimePoint.unknown(),
             )
-            job = Job(JobId("JOB", "ingest-pep-723"), workspace.id, "ingest", TimePoint.unknown())
+            job = Job(
+                JobId("JOB", "ingest-pep-723"),
+                tenant.id,
+                workspace.id,
+                "ingest",
+                TimePoint.unknown(),
+            )
             failed_run = Run(
-                RunId("RUN", "ingest-pep-723-1"), job.id, TimePoint.unknown(), "failed"
+                RunId("RUN", "ingest-pep-723-1"),
+                tenant.id,
+                workspace.id,
+                job.id,
+                TimePoint.unknown(),
+                "failed",
             )
             cancelled_run = Run(
-                RunId("RUN", "ingest-pep-723-2"), job.id, TimePoint.unknown(), "cancelled"
+                RunId("RUN", "ingest-pep-723-2"),
+                tenant.id,
+                workspace.id,
+                job.id,
+                TimePoint.unknown(),
+                "cancelled",
             )
             record_manager = PostgresRecordTransactionManager(engine)
             service = RecordPersistenceService(record_manager)
@@ -326,11 +360,21 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                 with record_manager.transaction() as transaction:
                     transaction.jobs.save_job(
                         Job(
-                            JobId("JOB", "rolled-back"), workspace.id, "ingest", TimePoint.unknown()
+                            JobId("JOB", "rolled-back"),
+                            tenant.id,
+                            workspace.id,
+                            "ingest",
+                            TimePoint.unknown(),
                         )
                     )
                     transaction.runs.save_run(
-                        Run(RunId("RUN", "orphan"), JobId("JOB", "missing"), TimePoint.unknown())
+                        Run(
+                            RunId("RUN", "orphan"),
+                            tenant.id,
+                            workspace.id,
+                            JobId("JOB", "missing"),
+                            TimePoint.unknown(),
+                        )
                     )
 
             with record_manager.transaction() as transaction:
@@ -341,6 +385,7 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                     transaction.relationships.save_relationship(
                         Relationship(
                             RelationshipId("RELATIONSHIP", "invalid-endpoint"),
+                            tenant.id,
                             workspace.id,
                             entity_a.id,
                             "replaces",

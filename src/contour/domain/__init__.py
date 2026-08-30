@@ -15,6 +15,7 @@ from contour.domain.relationship import Relationship, RelationshipId
 from contour.domain.run import Run, RunId
 from contour.domain.source import Source, SourceId
 from contour.domain.source_version import ContentDigest, SourceVersion, SourceVersionId
+from contour.domain.tenant import Tenant, TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import Workspace, WorkspaceId
 
@@ -36,6 +37,8 @@ __all__ = [
     "SourceVersion",
     "SourceVersionId",
     "TimePoint",
+    "Tenant",
+    "TenantId",
     "Workspace",
     "WorkspaceId",
 ]

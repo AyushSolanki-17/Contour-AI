@@ -9,6 +9,8 @@ from sqlalchemy import Connection, insert, select
 from contour.domain.evidence import EvidenceId, EvidenceLocator
 from contour.domain.source import SourceId
 from contour.domain.source_version import ContentDigest, SourceVersionId
+from contour.domain.tenant import TenantId
+from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import evidence
 
 
@@ -22,6 +24,10 @@ class PostgresEvidenceRepository:
     def get_evidence(self, evidence_id: EvidenceId) -> EvidenceLocator | None:
         """Return evidence with its immutable source-version identity."""
         statement = select(
+            evidence.c.tenant_namespace,
+            evidence.c.tenant_value,
+            evidence.c.workspace_namespace,
+            evidence.c.workspace_value,
             evidence.c.source_namespace,
             evidence.c.source_value,
             evidence.c.content_digest,
@@ -40,6 +46,8 @@ class PostgresEvidenceRepository:
             ContentDigest(cast(str, row["content_digest"])),
         )
         return EvidenceLocator(
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
+            WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             version_id,
             cast(str, row["locator"]),
             cast(int | None, row["start_offset"]),
@@ -52,6 +60,10 @@ class PostgresEvidenceRepository:
         statement = insert(evidence).values(
             namespace=evidence_id.namespace,
             value=evidence_id.value,
+            tenant_namespace=locator.tenant_id.namespace,
+            tenant_value=locator.tenant_id.value,
+            workspace_namespace=locator.workspace_id.namespace,
+            workspace_value=locator.workspace_id.value,
             source_namespace=version_id.source_id.namespace,
             source_value=version_id.source_id.value,
             content_digest=version_id.content_digest.value,

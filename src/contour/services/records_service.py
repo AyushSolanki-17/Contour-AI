@@ -29,6 +29,8 @@ class RecordPersistenceService:
             raise ValueError("relationship endpoints must be included in the admitted entities")
         if any(entity.workspace_id != relationship.workspace_id for entity in entities):
             raise ValueError("entities and relationship must belong to the same workspace")
+        if any(entity.tenant_id != relationship.tenant_id for entity in entities):
+            raise ValueError("entities and relationship must belong to the same tenant")
 
         with self._transactions.transaction() as transaction:
             for entity in entities:
@@ -43,6 +45,10 @@ class RecordPersistenceService:
         """
         if any(run.job_id != job.id for run in runs):
             raise ValueError("every run must belong to the recorded job")
+        if any(
+            run.tenant_id != job.tenant_id or run.workspace_id != job.workspace_id for run in runs
+        ):
+            raise ValueError("every run must belong to the recorded tenant and workspace")
 
         with self._transactions.transaction() as transaction:
             transaction.jobs.save_job(job)

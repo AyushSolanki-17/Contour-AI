@@ -5,6 +5,21 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from contour.infrastructure.postgres.tables.catalog import (
+    evidence,
+    source_versions,
+    sources,
+    workspaces,
+)
+from contour.infrastructure.postgres.tables.knowledge import (
+    entities,
+    entity_evidence,
+    jobs,
+    relationship_evidence,
+    relationships,
+    runs,
+)
+
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "contour"
 _FORBIDDEN_IMPORTS_BY_LAYER = {
     "domain": (
@@ -160,6 +175,40 @@ def test_runtime_code_does_not_mutate_database_schema() -> None:
                 )
 
     assert violations == []
+
+
+def test_durable_records_declare_nonoptional_tenant_workspace_ownership() -> None:
+    """Every non-tenant durable record retains its owner tuple in Core metadata."""
+    tenant_owned_tables = (
+        workspaces,
+        sources,
+        source_versions,
+        evidence,
+        entities,
+        entity_evidence,
+        relationships,
+        relationship_evidence,
+        jobs,
+        runs,
+    )
+    for table in tenant_owned_tables:
+        assert not table.c.tenant_namespace.nullable
+        assert not table.c.tenant_value.nullable
+
+    workspace_owned_tables = (
+        sources,
+        source_versions,
+        evidence,
+        entities,
+        entity_evidence,
+        relationships,
+        relationship_evidence,
+        jobs,
+        runs,
+    )
+    for table in workspace_owned_tables:
+        assert not table.c.workspace_namespace.nullable
+        assert not table.c.workspace_value.nullable
 
 
 def _imported_names(path: Path) -> tuple[str, ...]:

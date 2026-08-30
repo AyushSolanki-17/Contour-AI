@@ -8,7 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from contour.domain import AcquiredContent, ContentDigest, Source, SourceId, TimePoint, WorkspaceId
+from contour.domain import (
+    AcquiredContent,
+    ContentDigest,
+    Source,
+    SourceId,
+    TenantId,
+    TimePoint,
+    WorkspaceId,
+)
 from contour.infrastructure.source.pep import (
     PepAcquiredContent,
     PepAcquisitionService,
@@ -38,6 +46,7 @@ def _source(*, canonical_locator: str = "https://peps.python.org/pep-0723/") -> 
     """Create the one public PEP source admitted by this fixture."""
     return Source(
         SourceId("SOURCE:PEP", "723"),
+        TenantId("TENANT", "test"),
         WorkspaceId("WORKSPACE", "test"),
         canonical_locator,
         "pep",

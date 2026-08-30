@@ -14,7 +14,9 @@ from contour.domain import (
     SourceId,
     SourceVersion,
     SourceVersionId,
+    TenantId,
     TimePoint,
+    WorkspaceId,
 )
 
 
@@ -30,6 +32,16 @@ def version_id() -> SourceVersionId:
     return SourceVersionId(source_id=source_id(), content_digest=digest())
 
 
+def tenant_id() -> TenantId:
+    """Return a valid tenant identity for ownership-bound records."""
+    return TenantId("TENANT", "test")
+
+
+def workspace_id() -> WorkspaceId:
+    """Return a valid workspace identity for ownership-bound records."""
+    return WorkspaceId("WORKSPACE", "test")
+
+
 def test_typed_identifiers_reject_malformed_and_mixed_values() -> None:
     with pytest.raises(ValueError, match="namespace"):
         SourceId(namespace="source:pep", value="723")
@@ -43,6 +55,8 @@ def test_source_version_identity_is_immutable_and_serializable() -> None:
     identity = version_id()
     source_version = SourceVersion(
         id=identity,
+        tenant_id=tenant_id(),
+        workspace_id=workspace_id(),
         source_id=source_id(),
         content_digest=digest(),
         observed_at=TimePoint(datetime(2026, 8, 20, 13, 0, tzinfo=UTC)),
@@ -56,6 +70,8 @@ def test_source_version_identity_is_immutable_and_serializable() -> None:
 
     assert source_version.to_primitive() == {
         "id": "SOURCE:PEP:723@sha256:" + "a" * 64,
+        "tenant_id": "TENANT:test",
+        "workspace_id": "WORKSPACE:test",
         "source_id": "SOURCE:PEP:723",
         "content_digest": "sha256:" + "a" * 64,
         "observed_at": "2026-08-20T13:00:00Z",
@@ -69,6 +85,8 @@ def test_source_version_rejects_identity_for_other_content() -> None:
     with pytest.raises(ValueError, match="content_digest"):
         SourceVersion(
             id=version_id(),
+            tenant_id=tenant_id(),
+            workspace_id=workspace_id(),
             source_id=source_id(),
             content_digest=ContentDigest("b" * 64),
             observed_at=TimePoint(datetime(2026, 8, 20, 13, 0, tzinfo=UTC)),
@@ -80,6 +98,8 @@ def test_source_version_rejects_identity_for_other_content() -> None:
 
 def test_evidence_locator_is_bound_to_one_version_and_exact_span() -> None:
     locator = EvidenceLocator(
+        tenant_id=tenant_id(),
+        workspace_id=workspace_id(),
         source_version_id=version_id(),
         locator="header:Replaces",
         start_offset=10,
@@ -87,15 +107,25 @@ def test_evidence_locator_is_bound_to_one_version_and_exact_span() -> None:
     )
 
     assert locator.to_primitive() == {
+        "tenant_id": "TENANT:test",
+        "workspace_id": "WORKSPACE:test",
         "source_version_id": "SOURCE:PEP:723@sha256:" + "a" * 64,
         "locator": "header:Replaces",
         "start_offset": 10,
         "end_offset": 23,
     }
     with pytest.raises(ValueError, match="both start_offset"):
-        EvidenceLocator(source_version_id=version_id(), locator="header:Replaces", start_offset=10)
+        EvidenceLocator(
+            tenant_id=tenant_id(),
+            workspace_id=workspace_id(),
+            source_version_id=version_id(),
+            locator="header:Replaces",
+            start_offset=10,
+        )
     with pytest.raises(ValueError, match="positive length"):
         EvidenceLocator(
+            tenant_id=tenant_id(),
+            workspace_id=workspace_id(),
             source_version_id=version_id(),
             locator="header:Replaces",
             start_offset=23,

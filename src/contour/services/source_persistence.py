@@ -5,11 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from contour.domain.acquired_content import AcquiredContent
+from contour.domain.source import Source
 from contour.domain.source_version import SourceVersion, SourceVersionId
 from contour.domain.time_point import TimePoint
 from contour.repositories.artifact import ArtifactRepository, ArtifactWriteState
 from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.catalog_errors import CatalogConflictError
+from contour.services.catalog_errors import CatalogConflictError, CatalogReferenceError
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,8 +52,12 @@ class SourcePersistenceService:
         if not isinstance(acquired, AcquiredContent):
             raise TypeError("acquired must be AcquiredContent")
 
+        artifact_state = self._artifacts.persist(acquired.content, acquired.content_digest)
+        source = self._source_for(acquired)
         version = SourceVersion(
             id=SourceVersionId(acquired.source_id, acquired.content_digest),
+            tenant_id=source.tenant_id,
+            workspace_id=source.workspace_id,
             source_id=acquired.source_id,
             content_digest=acquired.content_digest,
             observed_at=acquired.observed_at,
@@ -60,7 +65,6 @@ class SourcePersistenceService:
             source_time=TimePoint.unknown(),
             revision_time=acquired.revision_time,
         )
-        artifact_state = self._artifacts.persist(acquired.content, acquired.content_digest)
 
         try:
             accepted = self._admit_or_get(version)
@@ -70,6 +74,14 @@ class SourcePersistenceService:
                 raise
             accepted = retry_winner
         return SourcePersistenceResult(accepted, artifact_state)
+
+    def _source_for(self, acquired: AcquiredContent) -> Source:
+        """Return the accepted source needed to bind a version to its owner."""
+        with self._transactions.transaction() as transaction:
+            source = transaction.sources.get_source(acquired.source_id)
+        if source is None:
+            raise CatalogReferenceError()
+        return source
 
     def _admit_or_get(self, candidate: SourceVersion) -> SourceVersion:
         """Return an equivalent accepted version or insert the candidate."""

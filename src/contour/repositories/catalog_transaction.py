@@ -8,11 +8,16 @@ from typing import Protocol, Self
 from contour.repositories.evidence import EvidenceRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
+from contour.repositories.tenant import TenantRepository
 from contour.repositories.workspace import WorkspaceRepository
 
 
 class CatalogUnitOfWork(Protocol):
     """Provides repositories for one atomic catalog admission operation."""
+
+    @property
+    def tenants(self) -> TenantRepository:
+        """Return the tenant repository bound to this transaction."""
 
     @property
     def workspaces(self) -> WorkspaceRepository:

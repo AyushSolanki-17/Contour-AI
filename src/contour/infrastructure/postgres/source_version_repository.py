@@ -8,7 +8,9 @@ from typing import cast
 from sqlalchemy import Connection, insert, select
 
 from contour.domain.source_version import SourceVersion, SourceVersionId
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
+from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import source_versions
 
 
@@ -22,6 +24,10 @@ class PostgresSourceVersionRepository:
     def get_source_version(self, version_id: SourceVersionId) -> SourceVersion | None:
         """Return an immutable source version by content identity."""
         statement = select(
+            source_versions.c.tenant_namespace,
+            source_versions.c.tenant_value,
+            source_versions.c.workspace_namespace,
+            source_versions.c.workspace_value,
             source_versions.c.observed_at,
             source_versions.c.upstream_revision,
             source_versions.c.source_time,
@@ -36,6 +42,8 @@ class PostgresSourceVersionRepository:
             return None
         return SourceVersion(
             version_id,
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
+            WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             version_id.source_id,
             version_id.content_digest,
             TimePoint(cast(datetime | None, row["observed_at"])),
@@ -50,6 +58,10 @@ class PostgresSourceVersionRepository:
             source_namespace=version.source_id.namespace,
             source_value=version.source_id.value,
             content_digest=version.content_digest.value,
+            tenant_namespace=version.tenant_id.namespace,
+            tenant_value=version.tenant_id.value,
+            workspace_namespace=version.workspace_id.namespace,
+            workspace_value=version.workspace_id.value,
             observed_at=version.observed_at.value,
             observation_time_unknown=not version.observed_at.is_known,
             upstream_revision=version.upstream_revision,

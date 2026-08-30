@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from contour.domain.entity import EntityId
 from contour.domain.evidence import EvidenceId
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.validation import require_evidence_ids, require_text
 from contour.domain.workspace import WorkspaceId
@@ -34,6 +35,7 @@ class Relationship:
     """A typed, directed relationship whose edge retains its evidence."""
 
     id: RelationshipId
+    tenant_id: TenantId
     workspace_id: WorkspaceId
     from_entity: EntityId
     relationship_type: str
@@ -46,6 +48,8 @@ class Relationship:
         """Reject mixed endpoints, empty relationship types, and missing evidence."""
         if not isinstance(self.id, RelationshipId):
             raise TypeError("id must be a RelationshipId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(self.workspace_id, WorkspaceId):
             raise TypeError("workspace_id must be a WorkspaceId")
         if not isinstance(self.from_entity, EntityId):

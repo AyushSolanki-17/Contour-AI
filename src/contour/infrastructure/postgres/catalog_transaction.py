@@ -14,11 +14,13 @@ from contour.infrastructure.postgres.source_repository import PostgresSourceRepo
 from contour.infrastructure.postgres.source_version_repository import (
     PostgresSourceVersionRepository,
 )
+from contour.infrastructure.postgres.tenant_repository import PostgresTenantRepository
 from contour.infrastructure.postgres.workspace_repository import PostgresWorkspaceRepository
 from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.repositories.evidence import EvidenceRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
+from contour.repositories.tenant import TenantRepository
 from contour.repositories.workspace import WorkspaceRepository
 from contour.services.catalog_errors import (
     CatalogConflictError,
@@ -47,10 +49,16 @@ class PostgresCatalogUnitOfWork:
         self._engine = engine
         self._connection: Connection | None = None
         self._transaction: RootTransaction | None = None
+        self._tenants: TenantRepository | None = None
         self._workspaces: WorkspaceRepository | None = None
         self._sources: SourceRepository | None = None
         self._source_versions: SourceVersionRepository | None = None
         self._evidence: EvidenceRepository | None = None
+
+    @property
+    def tenants(self) -> TenantRepository:
+        """Return the tenant repository in the active transaction."""
+        return self._require_active(self._tenants, name="tenant repository")
 
     @property
     def workspaces(self) -> WorkspaceRepository:
@@ -85,6 +93,7 @@ class PostgresCatalogUnitOfWork:
 
         self._connection = connection
         self._transaction = transaction
+        self._tenants = PostgresTenantRepository(connection)
         self._workspaces = PostgresWorkspaceRepository(connection)
         self._sources = PostgresSourceRepository(connection)
         self._source_versions = PostgresSourceVersionRepository(connection)
@@ -126,6 +135,7 @@ class PostgresCatalogUnitOfWork:
         """Remove references to all resources after the scope closes."""
         self._connection = None
         self._transaction = None
+        self._tenants = None
         self._workspaces = None
         self._sources = None
         self._source_versions = None

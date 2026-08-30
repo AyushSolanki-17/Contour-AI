@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
 from contour.domain.source_version import SourceVersionId
+from contour.domain.tenant import TenantId
+from contour.domain.workspace import WorkspaceId
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +36,8 @@ class EvidenceId:
 class EvidenceLocator:
     """An inspectable field or byte span inside exactly one immutable version."""
 
+    tenant_id: TenantId
+    workspace_id: WorkspaceId
     source_version_id: SourceVersionId
     locator: str
     start_offset: int | None = None
@@ -41,6 +45,10 @@ class EvidenceLocator:
 
     def __post_init__(self) -> None:
         """Reject ambiguous locators and spans detached from a source version."""
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
+        if not isinstance(self.workspace_id, WorkspaceId):
+            raise TypeError("workspace_id must be a WorkspaceId")
         if not isinstance(self.source_version_id, SourceVersionId):
             raise TypeError("source_version_id must be a SourceVersionId")
         if not isinstance(self.locator, str):
@@ -65,6 +73,8 @@ class EvidenceLocator:
     def to_primitive(self) -> dict[str, str | int | None]:
         """Return a framework-neutral exact locator representation."""
         return {
+            "tenant_id": str(self.tenant_id),
+            "workspace_id": str(self.workspace_id),
             "source_version_id": str(self.source_version_id),
             "locator": self.locator,
             "start_offset": self.start_offset,

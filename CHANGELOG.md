@@ -21,6 +21,11 @@ date without rewriting what was actually delivered.
   caller-owned canonical identifiers, exact-replay idempotency, immutable
   conflict handling, workspace-scoped inspection, supported-source validation,
   stable common errors, and a regenerated frontend-consumable contract.
+- Durable Tenant ownership for Workspaces, Sources, immutable Versions,
+  Evidence, Entities, Relationships, Jobs, and Runs. PostgreSQL composite
+  foreign keys now reject cross-owner evidence, relationship, and run links;
+  populated legacy schemas migrate atomically into the explicit
+  `LEGACY:default` Tenant.
 - Source-neutral acquired-content and persistence contracts keep PEP-specific
   validation in the reference source adapter while preserving generic artifact
   and immutable-version recovery behavior.

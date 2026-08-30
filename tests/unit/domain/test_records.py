@@ -17,6 +17,7 @@ from contour.domain import (
     Run,
     RunId,
     SourceId,
+    TenantId,
     TimePoint,
     Workspace,
     WorkspaceId,
@@ -28,15 +29,21 @@ def workspace_id() -> WorkspaceId:
     return WorkspaceId("WORKSPACE", "test")
 
 
+def tenant_id() -> TenantId:
+    """Return a valid tenant identity for ownership-bound records."""
+    return TenantId("TENANT", "test")
+
+
 def evidence_id(value: str = "e-1") -> EvidenceId:
     """Return a valid test evidence identity."""
     return EvidenceId("EVIDENCE", value)
 
 
 def test_records_require_typed_identity_and_edge_evidence() -> None:
-    workspace = Workspace(workspace_id(), "Test workspace", "maintainer")
+    workspace = Workspace(workspace_id(), tenant_id(), "Test workspace", "maintainer")
     entity_a = Entity(
         id=EntityId("PEP", "723"),
+        tenant_id=workspace.tenant_id,
         workspace_id=workspace.id,
         label="PEP 723",
         evidence_ids=(evidence_id(),),
@@ -45,6 +52,7 @@ def test_records_require_typed_identity_and_edge_evidence() -> None:
     )
     entity_b = Entity(
         id=EntityId("PYTHON", "3.14"),
+        tenant_id=workspace.tenant_id,
         workspace_id=workspace.id,
         label="Python 3.14",
         evidence_ids=(evidence_id("e-2"),),
@@ -54,6 +62,7 @@ def test_records_require_typed_identity_and_edge_evidence() -> None:
 
     relationship = Relationship(
         id=RelationshipId("REL", "723-replaces-722"),
+        tenant_id=workspace.tenant_id,
         workspace_id=workspace.id,
         from_entity=entity_a.id,
         relationship_type="replaces",
@@ -72,6 +81,7 @@ def test_records_require_typed_identity_and_edge_evidence() -> None:
     with pytest.raises(TypeError, match="from_entity"):
         Relationship(
             id=relationship.id,
+            tenant_id=workspace.tenant_id,
             workspace_id=workspace.id,
             from_entity=SourceId("SOURCE:PEP", "723"),  # type: ignore[arg-type]
             relationship_type="replaces",
@@ -84,6 +94,7 @@ def test_records_require_typed_identity_and_edge_evidence() -> None:
     with pytest.raises(ValueError, match="at least one"):
         Relationship(
             id=relationship.id,
+            tenant_id=workspace.tenant_id,
             workspace_id=workspace.id,
             from_entity=entity_a.id,
             relationship_type="replaces",
@@ -95,10 +106,12 @@ def test_records_require_typed_identity_and_edge_evidence() -> None:
 
 
 def test_job_and_run_preserve_requested_work_and_attempt_lifecycles() -> None:
-    job = Job(JobId("JOB", "j-1"), workspace_id(), "ingest", TimePoint.unknown())
+    job = Job(JobId("JOB", "j-1"), tenant_id(), workspace_id(), "ingest", TimePoint.unknown())
     queued = job.queue()
     running = queued.start()
-    run = Run(RunId("RUN", "r-1"), running.id, TimePoint.unknown()).start()
+    run = Run(
+        RunId("RUN", "r-1"), tenant_id(), workspace_id(), running.id, TimePoint.unknown()
+    ).start()
 
     assert running.finish(succeeded=False).status == "failed"
     assert run.finish(succeeded=True).status == "succeeded"

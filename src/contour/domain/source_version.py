@@ -12,7 +12,9 @@ from dataclasses import dataclass
 
 from contour.domain.identifier_validation import require_sha256_digest
 from contour.domain.source import SourceId
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
+from contour.domain.workspace import WorkspaceId
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +72,8 @@ class SourceVersion:
     """Immutable metadata for exact bytes observed from one logical source."""
 
     id: SourceVersionId
+    tenant_id: TenantId
+    workspace_id: WorkspaceId
     source_id: SourceId
     content_digest: ContentDigest
     observed_at: TimePoint
@@ -81,6 +85,10 @@ class SourceVersion:
         """Ensure the version key cannot describe another source or content."""
         if not isinstance(self.id, SourceVersionId):
             raise TypeError("id must be a SourceVersionId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
+        if not isinstance(self.workspace_id, WorkspaceId):
+            raise TypeError("workspace_id must be a WorkspaceId")
         if not isinstance(self.source_id, SourceId):
             raise TypeError("source_id must be a SourceId")
         if not isinstance(self.content_digest, ContentDigest):
@@ -105,6 +113,8 @@ class SourceVersion:
         """Return a framework-neutral representation preserving unknown times."""
         return {
             "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
+            "workspace_id": str(self.workspace_id),
             "source_id": str(self.source_id),
             "content_digest": str(self.content_digest),
             "observed_at": self.observed_at.to_primitive(),

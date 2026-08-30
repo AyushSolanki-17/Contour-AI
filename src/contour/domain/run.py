@@ -7,7 +7,9 @@ from typing import Literal
 
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
 from contour.domain.job import JobId
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
+from contour.domain.workspace import WorkspaceId
 
 RunStatus = Literal["pending", "running", "succeeded", "failed", "cancelled"]
 
@@ -34,6 +36,8 @@ class Run:
     """One execution attempt linked to exactly one requested job."""
 
     id: RunId
+    tenant_id: TenantId
+    workspace_id: WorkspaceId
     job_id: JobId
     started_at: TimePoint
     status: RunStatus = "pending"
@@ -42,6 +46,10 @@ class Run:
         """Validate run identity, job linkage, and lifecycle state."""
         if not isinstance(self.id, RunId):
             raise TypeError("id must be a RunId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
+        if not isinstance(self.workspace_id, WorkspaceId):
+            raise TypeError("workspace_id must be a WorkspaceId")
         if not isinstance(self.job_id, JobId):
             raise TypeError("job_id must be a JobId")
         if not isinstance(self.started_at, TimePoint):

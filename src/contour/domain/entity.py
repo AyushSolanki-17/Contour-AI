@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from contour.domain.evidence import EvidenceId
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.validation import require_evidence_ids, require_text
 from contour.domain.workspace import WorkspaceId
@@ -33,6 +34,7 @@ class Entity:
     """A namespaced entity assertion backed by exact evidence."""
 
     id: EntityId
+    tenant_id: TenantId
     workspace_id: WorkspaceId
     label: str
     evidence_ids: tuple[EvidenceId, ...]
@@ -43,6 +45,8 @@ class Entity:
         """Reject unsupported identity, evidence, or temporal values."""
         if not isinstance(self.id, EntityId):
             raise TypeError("id must be an EntityId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(self.workspace_id, WorkspaceId):
             raise TypeError("workspace_id must be a WorkspaceId")
         require_text(self.label, field_name="label")

@@ -10,6 +10,7 @@ from sqlalchemy import Connection, insert, select
 from contour.domain.entity import EntityId
 from contour.domain.evidence import EvidenceId
 from contour.domain.relationship import Relationship, RelationshipId
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.knowledge import relationship_evidence, relationships
@@ -56,6 +57,7 @@ class PostgresRelationshipRepository:
         )
         return Relationship(
             relationship_id,
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
             WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             EntityId(cast(str, row["from_namespace"]), cast(str, row["from_value"])),
             cast(str, row["relationship_type"]),
@@ -71,6 +73,8 @@ class PostgresRelationshipRepository:
             insert(relationships).values(
                 namespace=relationship.id.namespace,
                 value=relationship.id.value,
+                tenant_namespace=relationship.tenant_id.namespace,
+                tenant_value=relationship.tenant_id.value,
                 workspace_namespace=relationship.workspace_id.namespace,
                 workspace_value=relationship.workspace_id.value,
                 from_namespace=relationship.from_entity.namespace,
@@ -90,6 +94,10 @@ class PostgresRelationshipRepository:
                 {
                     "relationship_namespace": relationship.id.namespace,
                     "relationship_value": relationship.id.value,
+                    "tenant_namespace": relationship.tenant_id.namespace,
+                    "tenant_value": relationship.tenant_id.value,
+                    "workspace_namespace": relationship.workspace_id.namespace,
+                    "workspace_value": relationship.workspace_id.value,
                     "position": position,
                     "evidence_namespace": evidence_id.namespace,
                     "evidence_value": evidence_id.value,

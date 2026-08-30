@@ -6,6 +6,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.tenant import TenantId
 from contour.domain.workspace import Workspace, WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import workspaces
 
@@ -28,6 +29,7 @@ class PostgresWorkspaceRepository:
             return None
         return Workspace(
             WorkspaceId(cast(str, row["namespace"]), cast(str, row["value"])),
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
             cast(str, row["name"]),
             cast(str, row["owner_name"]),
             tuple((item[0], item[1]) for item in cast(list[list[str]], row["settings"])),
@@ -38,6 +40,8 @@ class PostgresWorkspaceRepository:
         statement = insert(workspaces).values(
             namespace=workspace.id.namespace,
             value=workspace.id.value,
+            tenant_namespace=workspace.tenant_id.namespace,
+            tenant_value=workspace.tenant_id.value,
             name=workspace.name,
             owner_name=workspace.owner,
             settings=list(workspace.settings),

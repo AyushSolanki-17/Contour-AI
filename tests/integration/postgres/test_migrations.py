@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260825_05"
+_REVISION = "20260830_06"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -28,8 +28,10 @@ def _alembic_config() -> Config:
 
 
 @pytest.mark.integration
-def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A fresh database reaches head without fabricating legacy observation time."""
+def test_populated_database_migrates_repeatably_to_tenant_ownership(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The prior head upgrades all representative rows into one explicit legacy tenant."""
     try:
         settings = Settings.from_environment()
     except Exception as error:
@@ -48,7 +50,7 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
             # Step 2: Seed the prior accepted schema with a version whose
             # observation time was not yet represented.
             monkeypatch.setenv("CONTOUR_POSTGRES_DB", database_name)
-            command.upgrade(_alembic_config(), "20260824_04")
+            command.upgrade(_alembic_config(), "20260825_05")
             with psycopg.connect(test_dsn) as test_connection:
                 with test_connection.cursor() as cursor:
                     cursor.execute(
@@ -76,8 +78,64 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
                     )
                     cursor.execute(
                         "INSERT INTO source_versions "
-                        "(source_namespace, source_value, content_digest) VALUES (%s, %s, %s)",
-                        ("SOURCE:PEP", "723", "a" * 64),
+                        "(source_namespace, source_value, content_digest, observation_time_unknown) "
+                        "VALUES (%s, %s, %s, %s)",
+                        ("SOURCE:PEP", "723", "a" * 64, True),
+                    )
+                    cursor.execute(
+                        "INSERT INTO evidence "
+                        "(namespace, value, source_namespace, source_value, content_digest, locator) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        ("EVIDENCE", "migration", "SOURCE:PEP", "723", "a" * 64, "header:Title"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO entities "
+                        "(namespace, value, workspace_namespace, workspace_value, label) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        ("ENTITY", "migration-a", "WORKSPACE", "migration", "Migration A"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO entity_evidence "
+                        "(entity_namespace, entity_value, position, evidence_namespace, evidence_value) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        ("ENTITY", "migration-a", 0, "EVIDENCE", "migration"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO relationships "
+                        "(namespace, value, workspace_namespace, workspace_value, from_namespace, from_value, "
+                        "relationship_type, to_namespace, to_value, primary_evidence_namespace, "
+                        "primary_evidence_value) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (
+                            "RELATIONSHIP",
+                            "migration",
+                            "WORKSPACE",
+                            "migration",
+                            "ENTITY",
+                            "migration-a",
+                            "related_to",
+                            "ENTITY",
+                            "migration-a",
+                            "EVIDENCE",
+                            "migration",
+                        ),
+                    )
+                    cursor.execute(
+                        "INSERT INTO relationship_evidence "
+                        "(relationship_namespace, relationship_value, position, evidence_namespace, evidence_value) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        ("RELATIONSHIP", "migration", 0, "EVIDENCE", "migration"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO jobs "
+                        "(namespace, value, workspace_namespace, workspace_value, kind, status) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        ("JOB", "migration", "WORKSPACE", "migration", "ingest", "requested"),
+                    )
+                    cursor.execute(
+                        "INSERT INTO runs (namespace, value, job_namespace, job_value, status) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        ("RUN", "migration", "JOB", "migration", "pending"),
                     )
 
             # Step 3: Apply the head revision twice to prove repeatability.
@@ -105,12 +163,34 @@ def test_clean_database_migrates_repeatably(monkeypatch: pytest.MonkeyPatch) -> 
                         ("runs",),
                         ("source_versions",),
                         ("sources",),
+                        ("tenants",),
                         ("workspaces",),
                     ]
                     cursor.execute(
                         "SELECT observed_at, observation_time_unknown FROM source_versions"
                     )
                     assert cursor.fetchone() == (None, True)
+                    cursor.execute("SELECT namespace, value FROM tenants ORDER BY namespace, value")
+                    assert cursor.fetchall() == [("LEGACY", "default")]
+                    for table_name in (
+                        "workspaces",
+                        "sources",
+                        "source_versions",
+                        "evidence",
+                        "entities",
+                        "entity_evidence",
+                        "relationships",
+                        "relationship_evidence",
+                        "jobs",
+                        "runs",
+                    ):
+                        cursor.execute(
+                            sql.SQL(
+                                "SELECT tenant_namespace, tenant_value FROM {} "
+                                "ORDER BY tenant_namespace, tenant_value"
+                            ).format(sql.Identifier(table_name))
+                        )
+                        assert cursor.fetchall() == [("LEGACY", "default")]
         finally:
             # Step 5: Recover safely even when migration or verification fails.
             with maintenance_connection.cursor() as cursor:

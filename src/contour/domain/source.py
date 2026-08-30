@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
+from contour.domain.tenant import TenantId
 from contour.domain.validation import require_text
 from contour.domain.workspace import WorkspaceId
 
@@ -36,6 +37,7 @@ class Source:
     """A stable logical origin without mutable latest content."""
 
     id: SourceId
+    tenant_id: TenantId
     workspace_id: WorkspaceId
     canonical_locator: str
     source_type: str
@@ -47,6 +49,8 @@ class Source:
         """Validate source ownership and explicit metadata values."""
         if not isinstance(self.id, SourceId):
             raise TypeError("id must be a SourceId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(self.workspace_id, WorkspaceId):
             raise TypeError("workspace_id must be a WorkspaceId")
         for field_name in ("canonical_locator", "source_type", "scope", "data_classification"):

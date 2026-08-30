@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.validation import require_text
 from contour.domain.workspace import WorkspaceId
@@ -35,6 +36,7 @@ class Job:
     """A durable request for work, distinct from each execution attempt."""
 
     id: JobId
+    tenant_id: TenantId
     workspace_id: WorkspaceId
     kind: str
     requested_at: TimePoint
@@ -44,6 +46,8 @@ class Job:
         """Validate job identity, request time, and lifecycle state."""
         if not isinstance(self.id, JobId):
             raise TypeError("id must be a JobId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(self.workspace_id, WorkspaceId):
             raise TypeError("workspace_id must be a WorkspaceId")
         require_text(self.kind, field_name="kind")

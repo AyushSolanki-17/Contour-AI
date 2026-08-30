@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 from contour.domain.source import Source, SourceId
+from contour.domain.tenant import Tenant, TenantId
 from contour.domain.workspace import Workspace, WorkspaceId
 from contour.repositories.catalog_transaction import CatalogTransactionManager
 from contour.services.catalog_errors import (
@@ -36,12 +37,19 @@ class WorkspaceSourceService:
         transactions: CatalogTransactionManager,
         source_policies: tuple[SourceRegistrationPolicy, ...],
         *,
+        local_tenant: Tenant,
         local_owner: str,
     ) -> None:
         """Initialize product operations with persistence and configured capabilities."""
         self._transactions = transactions
         self._source_policies = source_policies
+        self._local_tenant = local_tenant
         self._local_owner = local_owner
+
+    @property
+    def tenant_id(self) -> TenantId:
+        """Return the trusted-local tenant bound to this service instance."""
+        return self._local_tenant.id
 
     def put_workspace(self, workspace_id: WorkspaceId, *, name: str) -> Workspace:
         """Create a workspace or return its exactly matching accepted representation.
@@ -50,12 +58,17 @@ class WorkspaceSourceService:
             ResourceConflictError: If the identity already has a different representation.
             DependencyUnavailableError: If durable catalog storage is unavailable.
         """
-        candidate = Workspace(workspace_id, name, self._local_owner)
+        candidate = Workspace(workspace_id, self._local_tenant.id, name, self._local_owner)
 
         def operation() -> Workspace:
             with self._transactions.transaction() as transaction:
                 accepted = transaction.workspaces.get_workspace(workspace_id)
                 if accepted is None:
+                    accepted_tenant = transaction.tenants.get_tenant(self._local_tenant.id)
+                    if accepted_tenant is None:
+                        transaction.tenants.save_tenant(self._local_tenant)
+                    elif accepted_tenant != self._local_tenant:
+                        raise CatalogConflictError()
                     transaction.workspaces.save_workspace(candidate)
                     return candidate
                 return _require_exact_replay(accepted, candidate)
@@ -78,7 +91,7 @@ class WorkspaceSourceService:
                 workspace = transaction.workspaces.get_workspace(workspace_id)
         except CatalogPersistenceError as error:
             raise DependencyUnavailableError() from error
-        if workspace is None:
+        if workspace is None or workspace.tenant_id != self._local_tenant.id:
             raise ResourceNotFoundError()
         return workspace
 
@@ -96,7 +109,10 @@ class WorkspaceSourceService:
 
         def operation() -> Source:
             with self._transactions.transaction() as transaction:
-                if transaction.workspaces.get_workspace(source.workspace_id) is None:
+                workspace = transaction.workspaces.get_workspace(source.workspace_id)
+                if workspace is None or workspace.tenant_id != self._local_tenant.id:
+                    raise ResourceNotFoundError()
+                if source.tenant_id != workspace.tenant_id:
                     raise ResourceNotFoundError()
                 accepted = transaction.sources.get_source(source.id)
                 if accepted is None:
@@ -122,7 +138,11 @@ class WorkspaceSourceService:
                 source = transaction.sources.get_source(source_id)
         except CatalogPersistenceError as error:
             raise DependencyUnavailableError() from error
-        if source is None or source.workspace_id != workspace_id:
+        if (
+            source is None
+            or source.workspace_id != workspace_id
+            or source.tenant_id != self._local_tenant.id
+        ):
             raise ResourceNotFoundError()
         return source
 

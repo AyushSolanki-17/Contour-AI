@@ -6,15 +6,38 @@ import sqlalchemy as sa
 
 from contour.infrastructure.postgres.tables.metadata import metadata
 
+tenants = sa.Table(
+    "tenants",
+    metadata,
+    sa.Column("namespace", sa.Text(), nullable=False),
+    sa.Column("value", sa.Text(), nullable=False),
+    sa.Column("name", sa.Text(), nullable=False),
+    sa.PrimaryKeyConstraint("namespace", "value", name="pk_tenants"),
+)
+
 workspaces = sa.Table(
     "workspaces",
     metadata,
     sa.Column("namespace", sa.Text(), nullable=False),
     sa.Column("value", sa.Text(), nullable=False),
+    sa.Column("tenant_namespace", sa.Text(), nullable=False),
+    sa.Column("tenant_value", sa.Text(), nullable=False),
     sa.Column("name", sa.Text(), nullable=False),
     sa.Column("owner_name", sa.Text(), nullable=False),
     sa.Column("settings", sa.JSON(), nullable=False),
     sa.PrimaryKeyConstraint("namespace", "value", name="pk_workspaces"),
+    sa.UniqueConstraint(
+        "namespace",
+        "value",
+        "tenant_namespace",
+        "tenant_value",
+        name="uq_workspaces_ownership",
+    ),
+    sa.ForeignKeyConstraint(
+        ["tenant_namespace", "tenant_value"],
+        ["tenants.namespace", "tenants.value"],
+        name="fk_workspaces_tenant",
+    ),
 )
 
 sources = sa.Table(
@@ -22,6 +45,8 @@ sources = sa.Table(
     metadata,
     sa.Column("namespace", sa.Text(), nullable=False),
     sa.Column("value", sa.Text(), nullable=False),
+    sa.Column("tenant_namespace", sa.Text(), nullable=False),
+    sa.Column("tenant_value", sa.Text(), nullable=False),
     sa.Column("workspace_namespace", sa.Text(), nullable=False),
     sa.Column("workspace_value", sa.Text(), nullable=False),
     sa.Column("canonical_locator", sa.Text(), nullable=False),
@@ -30,10 +55,29 @@ sources = sa.Table(
     sa.Column("license", sa.Text(), nullable=True),
     sa.Column("data_classification", sa.Text(), nullable=False),
     sa.PrimaryKeyConstraint("namespace", "value", name="pk_sources"),
+    sa.UniqueConstraint(
+        "namespace",
+        "value",
+        "workspace_namespace",
+        "workspace_value",
+        "tenant_namespace",
+        "tenant_value",
+        name="uq_sources_ownership",
+    ),
     sa.ForeignKeyConstraint(
         ["workspace_namespace", "workspace_value"],
         ["workspaces.namespace", "workspaces.value"],
         name="fk_sources_workspace",
+    ),
+    sa.ForeignKeyConstraint(
+        ["workspace_namespace", "workspace_value", "tenant_namespace", "tenant_value"],
+        [
+            "workspaces.namespace",
+            "workspaces.value",
+            "workspaces.tenant_namespace",
+            "workspaces.tenant_value",
+        ],
+        name="fk_sources_workspace_ownership",
     ),
 )
 
@@ -43,12 +87,26 @@ source_versions = sa.Table(
     sa.Column("source_namespace", sa.Text(), nullable=False),
     sa.Column("source_value", sa.Text(), nullable=False),
     sa.Column("content_digest", sa.String(length=64), nullable=False),
+    sa.Column("tenant_namespace", sa.Text(), nullable=False),
+    sa.Column("tenant_value", sa.Text(), nullable=False),
+    sa.Column("workspace_namespace", sa.Text(), nullable=False),
+    sa.Column("workspace_value", sa.Text(), nullable=False),
     sa.Column("observed_at", sa.DateTime(timezone=True), nullable=True),
     sa.Column(
         "observation_time_unknown",
         sa.Boolean(),
         nullable=False,
         server_default=sa.false(),
+    ),
+    sa.UniqueConstraint(
+        "source_namespace",
+        "source_value",
+        "content_digest",
+        "workspace_namespace",
+        "workspace_value",
+        "tenant_namespace",
+        "tenant_value",
+        name="uq_source_versions_ownership",
     ),
     sa.Column("upstream_revision", sa.Text(), nullable=True),
     sa.Column("source_time", sa.DateTime(timezone=True), nullable=True),
@@ -60,6 +118,25 @@ source_versions = sa.Table(
         ["source_namespace", "source_value"],
         ["sources.namespace", "sources.value"],
         name="fk_source_versions_source",
+    ),
+    sa.ForeignKeyConstraint(
+        [
+            "source_namespace",
+            "source_value",
+            "workspace_namespace",
+            "workspace_value",
+            "tenant_namespace",
+            "tenant_value",
+        ],
+        [
+            "sources.namespace",
+            "sources.value",
+            "sources.workspace_namespace",
+            "sources.workspace_value",
+            "sources.tenant_namespace",
+            "sources.tenant_value",
+        ],
+        name="fk_source_versions_source_ownership",
     ),
     sa.CheckConstraint(
         "(observed_at IS NULL) = observation_time_unknown",
@@ -80,6 +157,10 @@ evidence = sa.Table(
     metadata,
     sa.Column("namespace", sa.Text(), nullable=False),
     sa.Column("value", sa.Text(), nullable=False),
+    sa.Column("tenant_namespace", sa.Text(), nullable=False),
+    sa.Column("tenant_value", sa.Text(), nullable=False),
+    sa.Column("workspace_namespace", sa.Text(), nullable=False),
+    sa.Column("workspace_value", sa.Text(), nullable=False),
     sa.Column("source_namespace", sa.Text(), nullable=False),
     sa.Column("source_value", sa.Text(), nullable=False),
     sa.Column("content_digest", sa.String(length=64), nullable=False),
@@ -87,6 +168,15 @@ evidence = sa.Table(
     sa.Column("start_offset", sa.BigInteger(), nullable=True),
     sa.Column("end_offset", sa.BigInteger(), nullable=True),
     sa.PrimaryKeyConstraint("namespace", "value", name="pk_evidence"),
+    sa.UniqueConstraint(
+        "namespace",
+        "value",
+        "workspace_namespace",
+        "workspace_value",
+        "tenant_namespace",
+        "tenant_value",
+        name="uq_evidence_ownership",
+    ),
     sa.ForeignKeyConstraint(
         ["source_namespace", "source_value", "content_digest"],
         [
@@ -95,6 +185,27 @@ evidence = sa.Table(
             "source_versions.content_digest",
         ],
         name="fk_evidence_source_version",
+    ),
+    sa.ForeignKeyConstraint(
+        [
+            "source_namespace",
+            "source_value",
+            "content_digest",
+            "workspace_namespace",
+            "workspace_value",
+            "tenant_namespace",
+            "tenant_value",
+        ],
+        [
+            "source_versions.source_namespace",
+            "source_versions.source_value",
+            "source_versions.content_digest",
+            "source_versions.workspace_namespace",
+            "source_versions.workspace_value",
+            "source_versions.tenant_namespace",
+            "source_versions.tenant_value",
+        ],
+        name="fk_evidence_source_version_ownership",
     ),
     sa.CheckConstraint(
         "(start_offset IS NULL AND end_offset IS NULL) OR "

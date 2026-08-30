@@ -9,6 +9,7 @@ from sqlalchemy import Connection, insert, select
 
 from contour.domain.entity import Entity, EntityId
 from contour.domain.evidence import EvidenceId
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.knowledge import entities, entity_evidence
@@ -53,6 +54,7 @@ class PostgresEntityRepository:
         )
         return Entity(
             entity_id,
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
             WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             cast(str, row["label"]),
             evidence_ids,
@@ -66,6 +68,8 @@ class PostgresEntityRepository:
             insert(entities).values(
                 namespace=entity.id.namespace,
                 value=entity.id.value,
+                tenant_namespace=entity.tenant_id.namespace,
+                tenant_value=entity.tenant_id.value,
                 workspace_namespace=entity.workspace_id.namespace,
                 workspace_value=entity.workspace_id.value,
                 label=entity.label,
@@ -79,6 +83,10 @@ class PostgresEntityRepository:
                 {
                     "entity_namespace": entity.id.namespace,
                     "entity_value": entity.id.value,
+                    "tenant_namespace": entity.tenant_id.namespace,
+                    "tenant_value": entity.tenant_id.value,
+                    "workspace_namespace": entity.workspace_id.namespace,
+                    "workspace_value": entity.workspace_id.value,
                     "position": position,
                     "evidence_namespace": evidence_id.namespace,
                     "evidence_value": evidence_id.value,

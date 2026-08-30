@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from contour.api.app import create_app
+from contour.domain.tenant import Tenant, TenantId
 from contour.infrastructure.source.pep import PepSourceRegistrationPolicy
 from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.services.health_service import HealthService
@@ -40,6 +41,7 @@ def render_contract() -> str:
     workspace_source_service = WorkspaceSourceService(
         ContractTransactionManager(),
         (PepSourceRegistrationPolicy(),),
+        local_tenant=Tenant(TenantId("TENANT:LOCAL", "default"), "Trusted local tenant"),
         local_owner="local-operator",
     )
     app = create_app(

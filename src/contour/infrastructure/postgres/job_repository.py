@@ -8,6 +8,7 @@ from typing import cast
 from sqlalchemy import Connection, insert, select
 
 from contour.domain.job import Job, JobId, JobStatus
+from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.knowledge import jobs
@@ -35,6 +36,7 @@ class PostgresJobRepository:
             return None
         return Job(
             job_id,
+            TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
             WorkspaceId(cast(str, row["workspace_namespace"]), cast(str, row["workspace_value"])),
             cast(str, row["kind"]),
             TimePoint(cast(datetime | None, row["requested_at"])),
@@ -47,6 +49,8 @@ class PostgresJobRepository:
             insert(jobs).values(
                 namespace=job.id.namespace,
                 value=job.id.value,
+                tenant_namespace=job.tenant_id.namespace,
+                tenant_value=job.tenant_id.value,
                 workspace_namespace=job.workspace_id.namespace,
                 workspace_value=job.workspace_id.value,
                 kind=job.kind,

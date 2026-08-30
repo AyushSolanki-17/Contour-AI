@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from sqlalchemy import Engine
 
 from contour.api.app import AppLifespan, create_app
+from contour.domain.tenant import Tenant, TenantId
 from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.readiness import PostgresReadinessProbe
@@ -39,6 +40,7 @@ def create_http_app(
     workspace_source_service = WorkspaceSourceService(
         PostgresCatalogTransactionManager(engine),
         (PepSourceRegistrationPolicy(),),
+        local_tenant=Tenant(TenantId("TENANT:LOCAL", "default"), "Trusted local tenant"),
         local_owner="local-operator",
     )
     return create_app(

@@ -91,6 +91,7 @@ def create_workspace_source_router(service: WorkspaceSourceService) -> APIRouter
         """Register a supported logical source or return its exact replay."""
         source = Source(
             _source_id(source_id),
+            service.tenant_id,
             _workspace_id(workspace_id),
             request.canonical_locator,
             request.source_type,

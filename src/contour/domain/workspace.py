@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from contour.domain.identifier_validation import require_identifier_value, require_namespace
+from contour.domain.tenant import TenantId
 from contour.domain.validation import require_text
 
 
@@ -35,6 +36,7 @@ class Workspace:
     """The isolated scope in which sources and derived knowledge are admitted."""
 
     id: WorkspaceId
+    tenant_id: TenantId
     name: str
     owner: str
     settings: tuple[tuple[str, str], ...] = ()
@@ -43,6 +45,8 @@ class Workspace:
         """Validate workspace identity and stable configuration values."""
         if not isinstance(self.id, WorkspaceId):
             raise TypeError("id must be a WorkspaceId")
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         require_text(self.name, field_name="name")
         require_text(self.owner, field_name="owner")
         if not isinstance(self.settings, tuple):

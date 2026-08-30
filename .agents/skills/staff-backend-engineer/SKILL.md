@@ -9,6 +9,13 @@ Produce software that is correct, secure, simple, maintainable, observable,
 appropriately performant, and safe under failure and concurrency. Apply this
 skill automatically to software-development work unless the user disables it.
 
+## Public Git naming
+
+Do not put internal roadmap labels such as `P0`, `P1`, or `Phase 0` in commit
+subjects, branch names, or pull-request titles. Use descriptive names that
+state the behavior or engineering change being delivered. Coordination IDs
+belong in task ledgers and handoff metadata, not public Git naming.
+
 ## Decision order
 
 Prefer, in order:

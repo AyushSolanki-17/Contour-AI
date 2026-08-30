@@ -1,216 +1,278 @@
 # Contour Active Work
 
-**Status:** one workspace/source contract card in review; one planned follow-up
-**Updated:** 2026-08-27
+**Status:** one tenant-foundation card in review; three dependency-gated follow-ups
+**Updated:** 2026-08-30
 
 This is the bounded execution queue for work promoted from the ordered
 [backend roadmap](docs/development/roadmap.md). Claim exactly one `ready` card
 before implementation; a reviewer accepts it, records the result in the
 [completed-task log](docs/development/task-history.md), and then archives it.
 
-## Active queue
+## Active review
 
-### P0-13 — Establish the source-neutral workspace and source product boundary
+`P0-13A` is awaiting review. The product owner required the first MVP to be
+multi-tenant on 2026-08-30, invalidating the earlier single-user/no-auth
+assumption in `P0-13`. No follow-up card is claimable until a separate reviewer
+accepts this bounded persistence card.
+
+### P0-13A — Establish tenant-owned persistence boundaries
 
 Owner role: backend
-Assignee: backend-api-agent
-Reviewer: unassigned
-Priority: P1
+Assignee: Codex
+Priority: P0
 Status: review
-Depends on: `P0-11` and `P0-11A` (accepted); owner contract checkpoint approved 2026-08-26
+Depends on: `P0-11` and `P0-11A` (accepted); 2026-08-30 owner direction checkpoint accepted
 Product: `PROD-P0-01`
+Contract: no new HTTP routes; the generated OpenAPI artifact must remain health-only
+
+#### Current handoff
+
+Implementation and the required deterministic, PostgreSQL, migration, and
+schema-drift checks are complete. Await separate reviewer acceptance before
+promoting a dependency-gated follow-up.
 
 #### Goal
 
-Give the browser its first real product capability through source-neutral
-workspace and source application services plus a generated, versioned HTTP
-contract, without extending reference-source-specific behavior.
-
-#### Frozen observable contract
-
-- Publish `PUT` and `GET /api/v1/workspaces/{workspace_id}` plus `PUT` and
-  `GET /api/v1/workspaces/{workspace_id}/sources/{source_id}`. Identifiers are
-  caller-stable opaque path values and responses return their canonical form.
-- Workspace creation accepts a name. The initial trusted-local profile assigns
-  the local operator; it does not publish authentication, authorization, or
-  permission behavior in this card.
-- Source registration accepts source type, canonical locator, scope, optional
-  license, and data classification through a source-neutral schema. A supported
-  reference adapter may be named as a capability value, but its number, URL,
-  format, or parsing rules must not enter reusable services or public schemas.
-- Repeating a `PUT` with the same identity and representation returns the same
-  accepted resource without duplicate state. Reusing the identity with a
-  different representation returns conflict without mutation.
-- Source registration requires an existing workspace, and source inspection
-  must not expose a source through a different workspace path.
-- Use the common error envelope with stable invalid-request, not-found,
-  conflict, unsupported-source, and dependency-unavailable codes and HTTP
-  statuses. Validation details must be useful without leaking internals.
-- Listing, pagination, ingestion, progress, normalization, extraction, search,
-  authentication, and authorization are explicitly unpublished in this card.
+Make a Tenant the durable ownership and security boundary before any product
+data is exposed through HTTP. Every Workspace and every record reachable from
+it must belong to exactly one Tenant, and the database must reject cross-tenant
+associations even when an application caller supplies valid foreign IDs.
 
 #### Requirements
 
-- Add source-neutral workspace/source application services over the accepted
-  transaction and repository boundaries; routes translate and validate only.
-- Generate `openapi/contour.openapi.json`; never edit the artifact by hand.
-- Keep failure and retry behavior atomic, deterministic, and safe under repeat
-  requests.
-- Update only implementation-coupled public documentation and contract examples.
-
-#### Verification budget
-
-- Reuse the accepted catalog persistence coverage, source-neutral architecture
-  guard, common error handling, OpenAPI drift check, and documentation checks.
-- Add at most one API-contract test module and five permanent behavioral cases:
-  success/open/replay, conflict and workspace scoping, invalid/unsupported
-  input, dependency failure, and generated-contract shape.
-- Extend an existing PostgreSQL catalog case only if the service behavior cannot
-  be proven through existing persistence evidence; do not duplicate API behavior
-  at the database layer.
-- Add no dependency, runner, service, browser test, live network, or source-
-  specific fixture. Report all test-file/case/runtime changes at handoff.
-
-#### Acceptance criteria
-
-- [x] A client can create/open a workspace and register/inspect its source using
-      only the generated contract and stable errors.
-- [x] Repeat requests are idempotent; identity conflicts and cross-workspace
-      source access fail without partial durable state or information leakage.
-- [x] Source-specific policy remains outside domain, reusable services, and
-      public transport schemas.
-- [x] The generated OpenAPI artifact passes drift checks and is ready for an
-      intentional frontend snapshot update.
-- [x] Focused service/API/persistence checks, `make quality`,
-      `make openapi-check`, and `make docs` pass.
-
-#### Verification evidence
-
-- Focused workspace/source API, health/error, OpenAPI, architecture, and safe
-  PostgreSQL failure checks: 16 passed.
-- `make quality`: formatting, linting, strict typing, OpenAPI drift, and the
-  default suite passed; 40 tests passed and 5 PostgreSQL integration tests were
-  explicitly skipped in 0.33 seconds.
-- `make openapi-check`, `make docs`, and `make precommit` passed. The generated
-  contract SHA-256 is
-  `c32bd92a6dbd8c9bb2bcdbc24c0fc1b10ec8534cd062159a1ba160038f5d483f`.
-- Test delta: one API-contract module and five permanent behavioral cases added;
-  the existing OpenAPI drift case was updated for composition only. No tests
-  were consolidated or removed, and no dependency, service, fixture, runner, or
-  default-suite category changed.
-- The accepted catalog transaction/repository coverage was reused without
-  adding overlapping PostgreSQL cases. Real PostgreSQL integration was not
-  rerun because the local Docker daemon was unavailable; no migration,
-  repository, table, or query changed in this card.
-
-## Accepted predecessor evidence
-
-### P0-11 — Persist acquired PEP content and immutable versions
-
-Owner role: backend
-Assignee: Codex
-Priority: P1
-Status: accepted
-Depends on: `P0-10` (accepted)
-Product: `PROD-P0-01`
-
-#### Goal
-
-Turn an accepted PEP acquisition into a durable content-addressed artifact and
-immutable source-version record without yet claiming normalization or worker
-execution.
-
-#### Requirements
-
-- Persist the exact admitted bytes through a content-addressed artifact
-  boundary and store the matching source-version manifest through the accepted
-  catalog boundary.
-- Retain the content digest, source identity, observation time, and available
-  upstream revision metadata without fabricating unknown values.
-- Make repeated persistence of the same admitted content idempotent, and reject
-  conflicting content or metadata that would rewrite an accepted version.
-- Define safe recovery for artifact-write or database failure so no accepted
-  manifest points to missing or integrity-invalid content.
-- Keep default tests offline and deterministic; exercise the relevant
-  PostgreSQL and artifact round trips at their real boundaries.
-- Do not add normalization, extraction, indexing, workers, or public product
-  routes in this card.
-
-#### Acceptance criteria
-
-- [x] The pinned acquisition produces an integrity-verifiable artifact and one
-      immutable source-version record with the same digest.
-- [x] Repeating the same acquisition returns the accepted version without
-      duplicate durable state or destructive overwrite.
-- [x] Conflicting content, missing artifacts, checksum mismatch, and partial
-      failure remain explicit and recoverable.
-- [x] Focused unit and integration checks, `make quality`,
-      `make openapi-check`, and `make docs` pass.
-
-#### Verification evidence
-
-- Focused offline unit and architecture checks: 19 passed.
-- Real artifact/PostgreSQL integration and migration checks: 5 passed against
-  isolated migrated databases; the local schema is at `20260825_05 (head)` and
-  `alembic check` reports no upgrade operations.
-- `make quality`: 34 passed, 5 explicitly skipped integration tests; formatting,
-  linting, strict typing, default tests, and OpenAPI drift all passed.
-- `make openapi-check`, `make docs`, and `make precommit` passed.
-
-### P0-11A — Remove reference-source coupling from application services
-
-Owner role: backend
-Assignee: Codex
-Priority: P1
-Status: accepted
-Depends on: `P0-11` (accepted)
-Product: `PROD-P0-01`
-
-#### Goal
-
-Keep the PEP implementation as a replaceable reference adapter while making
-source acquisition and immutable persistence generic product capabilities.
-
-#### Requirements
-
-- Remove PEP-specific types and policy from reusable application service
-  boundaries, especially the durable persistence service.
-- Define a source-neutral acquired-content contract carrying only source
-  identity, exact bytes, content digest, observation time, and optional
-  upstream metadata.
-- Keep PEP number, canonical URL, HTML validation, and pinned fixture behavior
-  inside the reference-source adapter or fixture boundary.
-- Preserve artifact, immutable-version, idempotency, conflict, integrity, and
-  recovery behavior.
-- Update implementation-coupled documentation and tests to describe PEP as a
-  reference source, not a product-level domain requirement.
+- Add a generic Tenant domain/persistence boundary and make every Workspace
+  belong to exactly one Tenant; Tenant and Workspace remain distinct because a
+  Tenant is the security owner while a Workspace is a context partition.
+- Extend durable ownership through Source, Source Version, Evidence, Entity,
+  Relationship, Job, and Run records. A record must be traceable to one Tenant
+  through its Workspace without relying on an optional convention.
+- Close current association gaps: evidence attachments, relationship endpoints,
+  producing jobs/runs, and future-derived records must not link objects owned by
+  different Workspaces or Tenants.
+- Add a forward migration that handles a populated pre-tenant database
+  deterministically and atomically, documents its compatibility/recovery
+  behavior, and never leaves nullable or ambiguous ownership.
+- Keep generic identities, repositories, migrations, and architecture checks
+  free of Reference Profile, Connector-vendor, PEP, or organization-specific
+  policy.
+- Preserve all accepted health behavior and the source-neutral acquisition and
+  artifact contracts.
 
 #### Non-goals
 
-- Do not implement normalization, extraction, indexing, workers, network
-  acquisition, or public ingestion routes.
-- Do not add a generic plugin framework, DI framework, or speculative provider
-  registry.
+- Do not add Principal, Membership, authentication middleware, product HTTP
+  routes, frontend behavior, invitations, roles, SSO, billing, or governance.
+- Do not add normalization, extraction, indexing, workers, ingestion progress,
+  live-network acquisition, or source-specific behavior.
+
+#### Verification budget
+
+- Reuse the existing source-neutral architecture check, OpenAPI drift checks,
+  PostgreSQL catalog/record integration modules, clean-migration test, and
+  existing transaction boundaries.
+- Add no more than one new tenant-isolation integration module and six permanent
+  behaviors: Tenant/Workspace ownership, ownership propagation, cross-workspace
+  relationship rejection, cross-tenant evidence rejection, populated-database
+  migration, and atomic failure/recovery. Six cases are justified because this
+  card changes both the security boundary and the durable schema.
+- Extend existing table/architecture checks in place. Add no auth/provider,
+  HTTP, runner, service, network, or fixture dependency.
+- Report cases and modules added, consolidated, or removed and any default-suite
+  runtime change at handoff.
 
 #### Acceptance criteria
 
-- [x] Generic application services and persistence results contain no PEP-
-      specific types or validation rules.
-- [x] The PEP fixture adapter still satisfies the generic acquisition boundary
-      and existing PEP failure classifications remain covered.
-- [x] Artifact/PostgreSQL invariants remain green, including idempotent retry
-      and immutable conflict rejection.
-- [x] Architecture checks prove source-specific code is outside generic domain
-      and application policy.
-- [x] Focused tests, `make quality`, `make openapi-check`, and `make docs` pass.
+- [x] Every Workspace has exactly one durable Tenant owner, and every existing
+      Phase 0 record has an unambiguous ownership path through that Workspace.
+- [x] PostgreSQL rejects cross-workspace and cross-tenant evidence,
+      relationship, job, and run associations atomically.
+- [x] A database at the prior migration head, including representative existing
+      rows, upgrades without data loss or ambiguous ownership and has a
+      documented recovery path.
+- [x] Source-neutral architecture and accepted acquisition/artifact behavior do
+      not regress.
+- [x] The generated OpenAPI artifact remains health-only and passes drift,
+      focused PostgreSQL, migration, quality, and documentation checks.
 
 #### Verification evidence
 
-- Focused source, artifact, and architecture checks: 15 passed.
-- Real artifact/PostgreSQL integration and migration checks: 5 passed.
-- Generic service boundary is covered by `test_application_services_remain_source_neutral`.
+- `make db-up` and `make db-ready` started and verified PostgreSQL; the tracked
+  forward migration upgraded the local database to `20260830_06 (head)`.
+- With the repository's local database configuration exported, `make
+  test-integration` passed: 49 tests, including the populated-database migration
+  and three tenant-isolation contracts.
+- `make migration-check` reported no new upgrade operations. `make quality`
+  passed formatting, linting, strict typing, default tests (41 passed, 8
+  integration tests skipped), and OpenAPI drift. `make docs` and `make
+  precommit` passed.
+- Test delta: one tenant-isolation PostgreSQL module added with three behavioral
+  cases (ownership propagation, cross-owner association rejection, and atomic
+  rollback); the existing migration module adds populated-database migration
+  coverage. No tests were consolidated or removed. The default suite completed
+  in 0.37 seconds; no dependency, runner, or fixture category changed.
 
-## Planned follow-up
+## Dependency-gated follow-up
+
+### P0-13B — Enforce principal membership and tenant-scoped services
+
+Owner role: backend
+Assignee: unassigned
+Priority: P0
+Status: planned
+Depends on: `P0-13A` accepted
+Product: `PROD-P0-01`
+Contract: transport-neutral application boundary; no new HTTP routes
+
+#### Goal
+
+Require every product use case to execute with an authenticated Principal and
+a verified Membership for exactly one Tenant, so tenant isolation is enforced
+above persistence before HTTP routes are published.
+
+#### Requirements
+
+- Define provider-neutral Principal, Membership, and Access Context contracts.
+  A client-supplied Tenant ID is a selector, never proof of access.
+- Creating a Tenant atomically creates the initiating Principal's Membership.
+  Listing or opening Tenants returns only memberships visible to that Principal.
+- Refactor existing Workspace, catalog-admission, knowledge-record, artifact,
+  and future execution service/repository entry points to require verified
+  Tenant scope; unsafe unscoped lookup must not remain available to delivery
+  code.
+- Return one non-enumerating inaccessible/not-found application outcome for a
+  foreign Tenant or foreign nested ID. Do not expose whether the object exists.
+- Define the portable scope that later job/run payloads, cursors, idempotency,
+  search, artifacts, logs, and traces must carry without implementing those
+  later features in this card.
+- Keep membership capabilities deliberately uniform in the MVP. The data model
+  may support later policy evolution, but no custom role semantics are accepted
+  here.
+
+#### Non-goals
+
+- No FastAPI auth middleware, bearer-token parsing, login UI, invitations,
+  membership administration, SSO/OIDC provider SDK, SCIM, RBAC/ABAC, billing,
+  quotas, or audit console.
+- No new product routes, normalization, ingestion, or search behavior.
+
+#### Verification budget
+
+- Reuse tenant-persistence integration evidence and existing application/
+  repository contract tests.
+- Add at most one access-context module and five permanent behaviors: Tenant
+  bootstrap, visible-Tenant listing, authorized nested operation, foreign-ID
+  non-enumeration, and cross-tenant mutation/link rejection. Parameterize
+  existing service families instead of repeating each at multiple layers.
+- Add no identity-provider, HTTP, network, browser, or test-runner dependency.
+
+#### Acceptance criteria
+
+- [ ] Two Principals can own separate Tenants and can observe only their own
+      Tenant, Workspace, Source, Evidence, Entity, Relationship, Job, and Run
+      state through application services.
+- [ ] Foreign and guessed nested IDs produce the same safe inaccessible result
+      as an unknown ID and cause no durable mutation.
+- [ ] No product-facing service or repository entry point can be invoked without
+      a verified Access Context.
+- [ ] Logs/errors from the focused checks include safe correlation scope but no
+      credential, source content, or foreign-object detail.
+- [ ] Focused service, persistence, architecture, quality, documentation, and
+      unchanged health-contract checks pass.
+
+### P0-13 — Publish the authenticated tenant/workspace/source contract
+
+Owner role: backend
+Assignee: unassigned
+Priority: P1
+Status: planned
+Depends on: `P0-13B` accepted; owner contract checkpoint
+Product: `PROD-P0-01`
+Contract: frozen planned six-route `/api/v1` collection contract below; current generated artifact remains health-only until implementation
+
+#### Goal
+
+Give the browser its first real product capability through an authenticated,
+source-neutral Tenant, Workspace, and Source HTTP contract.
+
+#### Frozen observable contract
+
+The card publishes exactly six collection routes:
+
+- `POST /api/v1/tenants` creates a Tenant from `name`, atomically grants the
+  authenticated Principal its initial Membership, and returns `201` with stable
+  `id` and `name`.
+- `GET /api/v1/tenants` lists only the authenticated Principal's Tenants.
+- `POST /api/v1/tenants/{tenant_id}/workspaces` creates a Workspace from `name`
+  and returns `201` with stable `id`, `tenant_id`, and `name`.
+- `GET /api/v1/tenants/{tenant_id}/workspaces` lists only Workspaces in that
+  accessible Tenant.
+- `POST /api/v1/tenants/{tenant_id}/workspaces/{workspace_id}/sources`
+  registers a Source from generic `connector_kind`, `canonical_locator`,
+  `scope`, nullable `license`, and `data_classification`, returning those fields
+  plus stable Tenant, Workspace, and Source IDs.
+- `GET /api/v1/tenants/{tenant_id}/workspaces/{workspace_id}/sources` returns
+  the same complete Source representation.
+
+Collection reads use deterministic ordering and optional opaque `cursor` and
+`limit`; `limit` defaults to 50 and cannot exceed 100. A cursor is bound to the
+authenticated Principal, Tenant, route, and query shape and cannot be replayed
+across Tenants. Source-native identifiers remain provenance, not route shape.
+
+All three `POST` routes require a 1–128 character visible-ASCII
+`Idempotency-Key`. The first accepted request returns `201`; the same scoped key
+and payload returns `200` with the original representation; a different payload
+returns `409 request.idempotency_conflict`. Scope includes authenticated
+Principal, Tenant where present, method, and route family, so the same literal
+key in another Tenant cannot collide or replay data. Duplicate Connector kind
+plus canonical locator within one Workspace returns
+`409 source.already_registered`; unknown Connector kinds return
+`422 source.unsupported_connector`. Idempotency is durable across concurrent
+requests and restart, and failed requests leave no reservation or partial data.
+
+`GET /health/live` and `GET /health/ready` remain unauthenticated. Every
+`/api/v1` route requires a valid bearer credential verified by a provider-
+neutral adapter; missing, invalid, or expired credentials return
+`401 auth.unauthenticated`. The local/demo adapter reads configured opaque
+credentials outside source control and never exposes them to a browser bundle.
+An inaccessible or mismatched Tenant, Workspace, or Source returns the same
+`404 resource.not_found` envelope as an unknown ID. Validation is `422`,
+conflicts are `409`, and infrastructure failure remains redacted
+`503 dependency.unavailable` in the existing error envelope.
+
+#### Non-goals
+
+- No password/login endpoint, invitation flow, membership-management route,
+  SSO/OIDC vendor integration, custom roles, ABAC, billing, quota, audit UI,
+  ingestion, normalization, search, or source-specific schema.
+- Do not publish individual-resource endpoints or adjacent APIs not listed
+  above.
+
+#### Verification budget
+
+- Reuse access-context/service tests, PostgreSQL migration coverage, common
+  error envelope, source-neutral architecture check, and OpenAPI drift checks.
+- Add at most one API-contract module and six permanent behaviors: auth/health
+  boundary, Tenant create/list, Workspace create/list, Source create/list,
+  scoped idempotency/cursor behavior, and parameterized foreign-ID/validation/
+  dependency failures. Six cases are justified by the combined public-contract
+  and tenant-isolation risk.
+- Add no hosted identity provider, browser runner, live-network dependency, or
+  source-specific fixture. Extend persistence coverage in place if needed.
+
+#### Acceptance criteria
+
+- [ ] An authenticated client can create/list its Tenant, create/list a
+      Workspace, and register/list a Source using only the generated contract.
+- [ ] A second Principal and Tenant cannot discover or operate on the first
+      Tenant through list results, guessed IDs, cursors, or idempotency keys.
+- [ ] Ordering, limit, cursor, idempotency, duplicate, validation, unsupported,
+      redaction, and restart/concurrency behavior match the frozen contract.
+- [ ] Health stays public, every product route is authenticated, and no secret
+      is committed, logged, serialized, or exposed to the browser.
+- [ ] The generated OpenAPI artifact passes drift checks and is ready for an
+      intentional frontend snapshot update.
+- [ ] Focused service, API, PostgreSQL, quality, documentation, and contract
+      checks pass.
 
 ### P0-12 — Prove source-neutral normalization with the PEP fixture
 
@@ -229,9 +291,12 @@ service boundary is accepted.
 
 #### Requirements
 
-- Normalize the pinned supported PEP content deterministically and retain the
-  source-version identity, transformation identity, and locator mapping needed
-  to resolve normalized fields or spans to exact source evidence.
+- Define normalized content and transformation results without PEP-specific
+  types or policy in domain and reusable application services.
+- Normalize the pinned supported PEP fixture deterministically in its adapter
+  and retain the source-version identity, transformation identity, and locator
+  mapping needed to resolve normalized fields or spans to exact source
+  evidence.
 - Store normalized output as a rebuildable content-addressed artifact with its
   own integrity digest and explicit derivation from the raw version.
 - Preserve structured-header and byte-span meaning where available, and keep
@@ -241,6 +306,8 @@ service boundary is accepted.
 - Keep default tests offline and deterministic.
 - Do not add entity or relationship extraction, search indexing, workers, or
   public product routes in this card.
+- Do not broaden to additional PEPs or another source ecosystem; the fixture is
+  a contract proof, not a product commitment.
 
 #### Acceptance criteria
 
@@ -253,12 +320,30 @@ service boundary is accepted.
 - [ ] Focused invariant and integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
 
+#### Verification budget
+
+- Reuse the acquired-content determinism, artifact-integrity, source-neutral
+  architecture, and PostgreSQL catalog cases.
+- Add at most one normalization-focused module and four permanent behaviors:
+  deterministic success, locator preservation, malformed/unsupported input,
+  and corrupt or integrity-mismatched derived output.
+- Keep all default checks offline; add no runner, service, live-network input,
+  broad fixture family, or duplicate persistence assertion.
+- Report test files/cases and default-suite runtime changes at handoff.
+
 ## Promotion and handoff rule
 
-`P0-13` is the only assigned card. Its implementer returns it to `review` with
-evidence; a separate reviewer accepts it before the contract can be synchronized
-to the frontend. `P0-12` remains planned and unassigned until that acceptance
-and a later owner checkpoint.
+The coordinator first synchronizes the local and private ledgers and gives the
+owner a checkpoint stating what is accepted, what remains in review, the one
+next proposed card, why it is next, and what remains deferred. A planned card
+stays unassigned; there are no dependency-gated reserve assignments.
+
+The owner replaced the earlier single-user assumption with a multi-tenant MVP
+requirement on 2026-08-30. `P0-13A` is therefore the only ready card.
+`P0-13B`, `P0-13`, and `P0-12` remain planned and unassigned in that order.
+An implementer claims exactly one `ready` card, moves it to `review` with
+evidence, and leaves acceptance and queue refill to a separate reviewer and
+coordinator.
 
 ## Recently completed
 

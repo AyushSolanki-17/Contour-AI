@@ -155,6 +155,10 @@ as a task log.
 
 ## Git hygiene
 
+Roadmap labels such as `P0`, `P1`, and `Phase 0` are internal coordination
+metadata. Do not use them in commit subjects, branch names, or pull-request
+titles. Use descriptive names that explain the actual change.
+
 - Make a Conventional Commit only after a cohesive, verified change is ready;
   avoid both speculative micro-commits and unrelated large bundles.
 - Stage explicit files, inspect the staged diff, and never commit credentials,

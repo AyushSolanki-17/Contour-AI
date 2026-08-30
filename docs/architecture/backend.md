@@ -97,7 +97,6 @@ src/contour/
     health_service.py             framework-neutral health use cases
     catalog_service.py            atomic catalog admission use case
     catalog_errors.py             safe catalog failure contracts
-    workspace_source_service.py   idempotent workspace/source product use cases
     source_persistence.py         artifact-first immutable source admission
   repositories/
     artifact.py                    exact content-addressed artifact port
@@ -339,16 +338,27 @@ removal path before adding that dependency. Singleton support alone is not a
 reason to add a container.
 
 The HTTP composition root currently creates one SQLAlchemy engine and connection
-pool for the process, injects it into PostgreSQL readiness and catalog
-infrastructure, composes the trusted-local workspace/source service with the
-supported PEP registration policy, and disposes the engine through FastAPI
-lifespan handling. This is ordinary constructor injection; a third-party DI
-container is intentionally deferred because the graph has no conditional or
+pool for the process, injects it into PostgreSQL infrastructure, and disposes it through
+FastAPI lifespan handling. This is ordinary constructor injection; a third-party
+DI container is intentionally deferred because the graph has no conditional or
 plugin-driven bindings that justify another runtime dependency.
 
 ## Data ownership
 
-PostgreSQL is authoritative for workspace and source metadata, immutable version manifests, evidence locators, basic entities and relationships, job/run state, search documents, and audit/security metadata appropriate to the current deployment.
+PostgreSQL is authoritative for Tenant and Membership state, tenant-owned
+Workspace and Source metadata, immutable Version manifests, Evidence locators,
+basic Entities and Relationships, Job/Run state, search documents, and
+audit/security metadata appropriate to the current deployment.
+
+Tenant is the durable ownership and security boundary; Workspace is a context
+partition inside exactly one Tenant. The implemented PostgreSQL schema stores a
+non-null Tenant and Workspace tuple on every catalog, knowledge, and execution
+record. Composite foreign keys bind sources, immutable versions, evidence,
+evidence attachments, relationship endpoints, jobs, and runs to that same
+tuple, so cross-owner associations fail atomically even for otherwise valid
+identifiers. Principal, Membership, verified Access Context, and tenant-scoped
+service queries remain the next application-boundary increment; they are not
+implied by the persistence layer alone.
 
 Artifact storage is authoritative for acquired bytes, large normalized artifacts, extraction/evaluation outputs, and reproducibility manifests. Every artifact reference includes an integrity digest.
 
@@ -364,11 +374,9 @@ The [knowledge model](knowledge-model.md) controls meaning independently of phys
 
 ## Initial service contracts
 
-The implemented public product subset creates and gets one workspace and
-registers and gets one nested logical source. Remaining bullets describe the
-ordered Phase 0 service boundary rather than currently published HTTP paths:
-
-- create, list, and get workspaces;
+- authenticate a Principal and derive verified Access Context;
+- create and list accessible Tenants with initial Membership;
+- create, list, and get Workspaces inside the verified Tenant;
 - validate, add, list, and get sources;
 - start, cancel, and retry ingestion;
 - poll or stream job/run progress;
@@ -394,10 +402,19 @@ HTTP handlers, workers, CLI commands, and tests call the same services. API cont
 
 ## Failure and trust model
 
-Phase 0 handles source preflight failure, timeout, duplicate requests, partial-stage failure, cancellation, retry, worker interruption, corrupt artifacts, checksum mismatch, empty results, unsupported capabilities, invalid credentials/sessions where enabled, and permission denial.
+Phase 0 handles source preflight failure, timeout, duplicate requests, partial-
+stage failure, cancellation, retry, worker interruption, corrupt artifacts,
+checksum mismatch, empty results, unsupported capabilities, invalid credentials
+or sessions, permission denial, guessed foreign IDs, and tenant-scope mismatch
+in cursors, idempotency, relationships, evidence, jobs, runs, and artifacts.
 
 Accepted work survives a failed stage. Retries are idempotent or create an explicit new attempt. Errors and traces redact secrets and never turn a failure into an unexplained empty result.
 
 ## Acceptance gate
 
-From a clean environment, the backend must start, migrate an empty database, create a sample workspace, ingest the supported source, survive and recover from a worker interruption, find a known entity, resolve it to exact evidence and a source version, expose its producing run, and reproduce the declared checks in CI.
+From a clean environment, the backend must start, migrate an empty database,
+authenticate a Principal, create/select its Tenant and sample Workspace, ingest
+the supported Source, survive and recover from a worker interruption, find a
+known Entity, resolve it to exact Evidence and a Version, expose its producing
+Run, deny the same path to a second Principal/Tenant without enumeration, and
+reproduce the declared checks in CI.

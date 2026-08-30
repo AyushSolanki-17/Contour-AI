@@ -1,7 +1,7 @@
 # Project Scope
 
 **Status:** controlling product and repository scope
-**Updated:** 2026-08-19
+**Updated:** 2026-08-30
 
 ## Purpose
 
@@ -11,12 +11,25 @@ Contour is not a generic chat assistant and does not treat model output, graph r
 
 ## Initial user and reference data
 
-The first concrete user is an engineering maintainer working with evolving proposals and guidance. The initial reference dataset is a bounded history of Python Enhancement Proposals (PEPs), chosen because it is public, versioned, understandable, and contains deterministic identifiers and relationships.
+The first concrete user is an engineering maintainer working with evolving
+proposals and guidance. A bounded history of Python Enhancement Proposals
+(PEPs) remains the smallest offline conformance input because it is public,
+versioned, understandable, and contains deterministic identifiers and
+relationships. The first real product-demonstration input is a bounded public
+software-organization release profile spanning real project, documentation,
+release, incident, security, and disclosure sources.
+
+Both inputs are replaceable workloads, not product dependencies or ecosystem
+commitments. PEP-specific and example-organization-specific identity,
+validation, formats, and parsing belong in source adapters, acquisition
+manifests, fixtures, and provenance. Reusable domain objects, application
+services, persistence contracts, and public HTTP schemas remain source-neutral.
 
 The first complete backend job is:
 
 ```text
-create workspace
+authenticate Principal and select/create accessible Tenant
+  -> create Workspace inside that Tenant
   -> register and validate a supported source
   -> ingest an immutable source version
   -> extract basic entities and relationships
@@ -45,8 +58,12 @@ This repository does not own frontend application code. Frontends consume the AP
 
 Phase 0 establishes a usable source-to-evidence backend:
 
-- workspace creation and lookup;
-- one supported public source type and a credential-free sample path;
+- provider-neutral Principal verification, minimal Membership, and
+  non-enumerating Tenant isolation;
+- Tenant creation/lookup plus Workspace creation/lookup inside an accessible
+  Tenant;
+- one small credential-free conformance source plus a bounded real Reference
+  Profile admitted through declared Connector capabilities;
 - preflight source validation;
 - durable acquisition, normalization, extraction, and indexing jobs;
 - immutable source versions and exact evidence locators;
@@ -56,6 +73,13 @@ Phase 0 establishes a usable source-to-evidence backend:
 - retry, cancellation, idempotency, and worker-crash recovery;
 - safe configuration, secret redaction, structured errors, and minimal telemetry; and
 - deterministic local fixtures, migrations, CI checks, and reproducible startup.
+
+Every durable and derived record is owned by exactly one Tenant through its
+Workspace. That scope must survive repository queries, relationship/evidence
+links, jobs/runs, cursors, idempotency, indexes, artifacts, logs, and errors.
+Phase 0 proves this with two Principals and two Tenants. It does not include
+invitations, membership administration, SSO/SCIM, custom roles, ABAC, billing,
+or enterprise governance.
 
 ## Product guarantees
 
@@ -67,6 +91,8 @@ Phase 0 establishes a usable source-to-evidence backend:
 - Entity merges are explicit, evidence-backed, and reversible.
 - Serving indexes are rebuildable projections, not the only copy of authoritative state.
 - Advanced infrastructure or AI must beat a simpler reference on a declared workload before admission.
+- A client Tenant selector never authorizes access; verified Membership does,
+  and foreign identifiers do not reveal whether data exists.
 
 ## Phase 0 non-goals
 

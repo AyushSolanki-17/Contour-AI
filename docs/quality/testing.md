@@ -1,7 +1,7 @@
 # Backend Testing Standard
 
 **Status:** required engineering standard
-**Updated:** 2026-08-20
+**Updated:** 2026-08-26
 
 Contour has two separate correctness obligations:
 
@@ -46,6 +46,42 @@ Match the verification budget to risk:
 Consolidate or delete a test when its protected contract disappears, another
 test subsumes it, or its maintenance and runtime cost exceed its regression
 signal. Do not retain tests as historical artifacts.
+
+## Test growth budget and review gate
+
+Write the verification plan before production implementation. It names the
+risks being protected, existing cases to extend, the canonical layer for each
+behavior, and the expected permanent test delta.
+
+The default budget for one bounded card is:
+
+- documentation or behavior-preserving refactor: no new behavioral tests;
+- confirmed defect: one smallest regression at the layer where the defect was
+  observable;
+- ordinary feature: one representative success path plus only materially
+  distinct failure classes, normally no more than five permanent behavioral
+  cases and one new test module; and
+- migration, security, concurrency, public-contract, or blocking
+  knowledge-invariant work: direct boundary coverage as required, with the
+  reason for exceeding the ordinary budget recorded before implementation.
+
+The numerical limits are review triggers, not targets. Parameter rows that
+express one equivalence class count as one behavior; do not split or combine
+tests to game the budget. A new test runner, service, large fixture, snapshot
+family, or default-suite dependency always requires explicit reviewer approval.
+
+Keep the Phase 0 default service-free suite below ten seconds on a normal local
+development machine. Database, browser, live-network, model, full-corpus, and
+benchmark work stays in explicit suites. If a card adds more than one second to
+the default suite or makes its runtime materially unstable, consolidate,
+optimize, or move the check to the correct explicit tier before handoff.
+
+Every handoff states test modules and behavioral cases added, changed,
+consolidated, and removed. Report the before/after default runtime when the
+suite, fixtures, dependencies, or selection changed. At each phase exit, review
+the suite for duplicate assertions, tests coupled to private implementation,
+obsolete regressions, oversized fixtures, and cases that belong at a cheaper
+layer; remove or merge them before the phase is accepted.
 
 ## Test layers
 

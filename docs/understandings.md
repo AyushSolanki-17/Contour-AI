@@ -1,7 +1,7 @@
 # Contour Vocabulary and Data Dictionary
 
 **Status:** living implementation glossary
-**Updated:** 2026-08-20
+**Updated:** 2026-08-30
 
 This document defines Contour terms as they are used in code, schema, and
 contracts. Update the existing entry when a term's meaning changes, and add a
@@ -12,6 +12,8 @@ are explicitly marked; they do not describe shipped behavior.
 
 | Term | Meaning in Contour | Example |
 |---|---|---|
+| **Domain** *(planned boundary)* | A namespaced vocabulary, mapping, policy, and evaluation boundary for one bounded problem. It extends generic Contour semantics without replacing them. | A release-context Domain registers release and work-item kinds while retaining generic Entity and Evidence contracts. |
+| **Connector** *(planned boundary)* | A capability-scoped adapter through which configured Sources can be observed. Connector capability, permission, time, and failure semantics are explicit. | One document Connector can observe several configured documentation Sources without making the document vendor a core type. |
 | **Workspace** | An isolated admission scope that owns sources and the knowledge later derived from them. It has a stable namespaced identity. | `WORKSPACE:python-maintainers` holds PEP material for one maintainer team. |
 | **Source** | A logical, stable origin with ownership and admission metadata. A source is not its newest fetched content. | `SOURCE:PEP:723` represents the PEP 723 publication location. |
 | **Source version** | One immutable observation of a source's exact admitted bytes. Its identity combines the source and the SHA-256 content digest. | `SOURCE:PEP:723@sha256:…` identifies one specific body of PEP 723 text. |
@@ -19,7 +21,12 @@ are explicitly marked; they do not describe shipped behavior.
 | **Evidence** | A durable, inspectable pointer into exactly one immutable source version. Evidence is the basis for later credited entities and relationships. | `EVIDENCE:pep-723-replaces` points to PEP 723's `Replaces` header. |
 | **Evidence locator** | The exact location inside a source version: a semantic locator plus, when available, a half-open byte span. | `header:Replaces`, bytes `[10, 23)`. |
 | **Catalog** | The durable set of workspaces, sources, source versions, and evidence records. It is the authoritative admission record, not a search index. | A catalog admission stores a workspace, PEP source, exact PEP version, and header evidence atomically. |
+| **Tenant** | The top-level durable data owner and security boundary. It is not a Workspace label or a client-selected filter. | Every Workspace belongs to exactly one Tenant. |
+| **Principal** | A provider-neutral authenticated subject. | A configured demo credential may resolve to a Principal without making that credential a domain type. |
+| **Membership** | The verified grant that lets a Principal operate inside one Tenant. | Listing Tenants returns only those for which the Principal has Membership. |
+| **Access Context** | The transport-neutral Principal, Tenant, Membership, and request correlation scope required by product services. | A guessed foreign Workspace ID receives the same inaccessible outcome as an unknown ID. |
 | **Catalog admission** | The service use case that accepts one internally consistent workspace/source/version/evidence set in a single transaction. | If evidence references a different source version, admission fails before writing. |
+| **Reference Profile** *(planned package)* | A removable acquisition manifest, source mapping, cutoff, checksum set, fixture, and experience example used to prove generic behavior on a real corpus. It is not a maintained Connector or core schema. | A bounded public release profile maps source-native records into generic Source, Entity, Event, Relationship, and Evidence kinds. |
 
 ## Knowledge and execution
 

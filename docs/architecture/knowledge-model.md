@@ -9,7 +9,11 @@ Contour separates what a thing is, what a source says about it, and why the syst
 
 ## Phase 0 objects
 
-- **Workspace:** the scope, settings, ownership context, and admitted capabilities for related work.
+- **Tenant:** the top-level durable ownership and security boundary.
+- **Principal:** a provider-neutral authenticated subject.
+- **Membership:** the grant that lets one Principal operate in one Tenant.
+- **Workspace:** the context scope, settings, and admitted capabilities for
+  related work inside exactly one Tenant.
 - **Source:** a stable logical origin with a namespaced identifier, canonical locator, source type, scope, license, and data classification. It does not contain mutable “latest text.”
 - **Source version:** an immutable observed source state with content hash, retrieval/observation time, source revision metadata where known, and bytes or a content-addressed pointer.
 - **Evidence:** an exact inspectable locator and span or structured field inside one source version.
@@ -107,6 +111,12 @@ relationship:
 
 ## Blocking invariants
 
+- Every Workspace belongs to exactly one Tenant, and every Phase 0 record is
+  unambiguously reachable through that ownership path.
+- A Principal operates in a Tenant only through verified Membership; a client-
+  supplied Tenant or Workspace identifier is never authorization evidence.
+- Evidence, Relationships, Jobs, Runs, derived artifacts, indexes, cursors, and
+  idempotency records cannot link or replay across Tenant boundaries.
 - No evidence exists without exactly one immutable source version.
 - No credited entity assertion or relationship exists without evidence or a complete `derived_from` chain.
 - Immutable source content and prior assertion sets are never rewritten as “latest.”

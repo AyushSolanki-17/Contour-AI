@@ -17,6 +17,10 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Versioned trusted-local workspace and logical-source PUT/GET APIs with
+  caller-owned canonical identifiers, exact-replay idempotency, immutable
+  conflict handling, workspace-scoped inspection, supported-source validation,
+  stable common errors, and a regenerated frontend-consumable contract.
 - Source-neutral acquired-content and persistence contracts keep PEP-specific
   validation in the reference source adapter while preserving generic artifact
   and immutable-version recovery behavior.

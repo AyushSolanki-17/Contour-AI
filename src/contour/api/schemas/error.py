@@ -5,6 +5,15 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
+class ErrorDetail(BaseModel):
+    """One safe field-level reason that an API request was rejected."""
+
+    model_config = ConfigDict(frozen=True)
+
+    field: str
+    message: str
+
+
 class ErrorBody(BaseModel):
     """A safe machine-readable error exposed to API clients."""
 
@@ -12,6 +21,7 @@ class ErrorBody(BaseModel):
 
     code: str
     message: str
+    details: tuple[ErrorDetail, ...] | None = None
 
 
 class ErrorResponse(BaseModel):

@@ -9,12 +9,14 @@ from fastapi.testclient import TestClient
 
 from contour.api.app import create_app
 from contour.domain.source import Source, SourceId
+from contour.domain.tenant import Tenant, TenantId
 from contour.domain.workspace import Workspace, WorkspaceId
 from contour.infrastructure.source.pep import PepSourceRegistrationPolicy
 from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.repositories.evidence import EvidenceRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
+from contour.repositories.tenant import TenantRepository
 from contour.repositories.workspace import WorkspaceRepository
 from contour.services.catalog_errors import CatalogConflictError, CatalogPersistenceError
 from contour.services.health_service import HealthService
@@ -50,6 +52,24 @@ class MemoryWorkspaceRepository:
         self._records[workspace.id] = workspace
 
 
+class MemoryTenantRepository:
+    """Stores trusted-local tenant records for one test transaction."""
+
+    def __init__(self, records: dict[TenantId, Tenant]) -> None:
+        """Bind the repository to copied transaction state."""
+        self._records = records
+
+    def get_tenant(self, tenant_id: TenantId) -> Tenant | None:
+        """Return a stored tenant, if present."""
+        return self._records.get(tenant_id)
+
+    def save_tenant(self, tenant: Tenant) -> None:
+        """Store one new tenant or reject its duplicate identity."""
+        if tenant.id in self._records:
+            raise CatalogConflictError()
+        self._records[tenant.id] = tenant
+
+
 class MemorySourceRepository:
     def __init__(self, records: dict[SourceId, Source]) -> None:
         self._records = records
@@ -66,10 +86,17 @@ class MemorySourceRepository:
 class MemoryTransaction:
     def __init__(self, manager: MemoryTransactionManager) -> None:
         self._manager = manager
+        self._tenant_records = manager.tenant_records.copy()
         self._workspace_records = manager.workspace_records.copy()
         self._source_records = manager.source_records.copy()
         self._workspaces = MemoryWorkspaceRepository(self._workspace_records)
+        self._tenants = MemoryTenantRepository(self._tenant_records)
         self._sources = MemorySourceRepository(self._source_records)
+
+    @property
+    def tenants(self) -> TenantRepository:
+        """Return the tenant repository for this test transaction."""
+        return self._tenants
 
     @property
     def workspaces(self) -> WorkspaceRepository:
@@ -97,12 +124,14 @@ class MemoryTransaction:
         _traceback: TracebackType | None,
     ) -> None:
         if exc_type is None:
+            self._manager.tenant_records = self._tenant_records
             self._manager.workspace_records = self._workspace_records
             self._manager.source_records = self._source_records
 
 
 class MemoryTransactionManager:
     def __init__(self) -> None:
+        self.tenant_records: dict[TenantId, Tenant] = {}
         self.workspace_records: dict[WorkspaceId, Workspace] = {}
         self.source_records: dict[SourceId, Source] = {}
 
@@ -119,6 +148,7 @@ def _client(manager: MemoryTransactionManager | BrokenTransactionManager) -> Tes
     service = WorkspaceSourceService(
         manager,
         (PepSourceRegistrationPolicy(),),
+        local_tenant=Tenant(TenantId("TENANT:LOCAL", "default"), "Trusted local tenant"),
         local_owner="local-operator",
     )
     return TestClient(
@@ -247,7 +277,16 @@ def test_catalog_dependency_failure_is_redacted_and_stable() -> None:
 
 
 def test_openapi_publishes_only_the_bounded_workspace_source_contract() -> None:
-    contract = _client(MemoryTransactionManager()).app.openapi()
+    application = create_app(
+        health_service=HealthService(AvailableProbe()),
+        workspace_source_service=WorkspaceSourceService(
+            MemoryTransactionManager(),
+            (PepSourceRegistrationPolicy(),),
+            local_tenant=Tenant(TenantId("TENANT:LOCAL", "default"), "Trusted local tenant"),
+            local_owner="local-operator",
+        ),
+    )
+    contract = application.openapi()
     product_paths = {path: value for path, value in contract["paths"].items() if "/api/v1" in path}
 
     assert set(product_paths) == {

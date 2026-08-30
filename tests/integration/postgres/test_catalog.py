@@ -141,6 +141,10 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                         sa.insert(evidence_table).values(
                             namespace="EVIDENCE",
                             value="invalid-half-null-span",
+                            tenant_namespace=tenant.id.namespace,
+                            tenant_value=tenant.id.value,
+                            workspace_namespace=workspace.id.namespace,
+                            workspace_value=workspace.id.value,
                             source_namespace=version.source_id.namespace,
                             source_value=version.source_id.value,
                             content_digest=version.content_digest.value,

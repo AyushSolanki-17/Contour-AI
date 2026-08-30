@@ -1,6 +1,6 @@
 # Contour Active Work
 
-**Status:** one tenant-foundation card in review; three dependency-gated follow-ups
+**Status:** one principal-membership card in progress; two dependency-gated follow-ups
 **Updated:** 2026-08-30
 
 This is the bounded execution queue for work promoted from the ordered
@@ -8,28 +8,26 @@ This is the bounded execution queue for work promoted from the ordered
 before implementation; a reviewer accepts it, records the result in the
 [completed-task log](docs/development/task-history.md), and then archives it.
 
-## Active review
+## Accepted predecessor
 
-`P0-13A` is awaiting review. The product owner required the first MVP to be
-multi-tenant on 2026-08-30, invalidating the earlier single-user/no-auth
-assumption in `P0-13`. No follow-up card is claimable until a separate reviewer
-accepts this bounded persistence card.
+`P0-13A` was accepted after review of merged implementation PR #10 and the
+verification handoff in PR #12. The product owner authorized `P0-13B` to begin
+on 2026-08-30.
 
 ### P0-13A — Establish tenant-owned persistence boundaries
 
 Owner role: backend
 Assignee: Codex
 Priority: P0
-Status: review
+Status: accepted
 Depends on: `P0-11` and `P0-11A` (accepted); 2026-08-30 owner direction checkpoint accepted
 Product: `PROD-P0-01`
 Contract: no new HTTP routes; the generated OpenAPI artifact must remain health-only
 
 #### Current handoff
 
-Implementation and the required deterministic, PostgreSQL, migration, and
-schema-drift checks are complete. Await separate reviewer acceptance before
-promoting a dependency-gated follow-up.
+Accepted after review of the merged tenant-ownership implementation and its
+green quality, PostgreSQL persistence, migration, and secret-scan checks.
 
 #### Goal
 
@@ -111,15 +109,15 @@ associations even when an application caller supplies valid foreign IDs.
   coverage. No tests were consolidated or removed. The default suite completed
   in 0.37 seconds; no dependency, runner, or fixture category changed.
 
-## Dependency-gated follow-up
+## Active queue
 
 ### P0-13B — Enforce principal membership and tenant-scoped services
 
 Owner role: backend
-Assignee: unassigned
+Assignee: Codex
 Priority: P0
-Status: planned
-Depends on: `P0-13A` accepted
+Status: in_progress
+Depends on: `P0-13A` (accepted)
 Product: `PROD-P0-01`
 Contract: transport-neutral application boundary; no new HTTP routes
 
@@ -339,11 +337,11 @@ next proposed card, why it is next, and what remains deferred. A planned card
 stays unassigned; there are no dependency-gated reserve assignments.
 
 The owner replaced the earlier single-user assumption with a multi-tenant MVP
-requirement on 2026-08-30. `P0-13A` is therefore the only ready card.
-`P0-13B`, `P0-13`, and `P0-12` remain planned and unassigned in that order.
-An implementer claims exactly one `ready` card, moves it to `review` with
-evidence, and leaves acceptance and queue refill to a separate reviewer and
-coordinator.
+requirement on 2026-08-30. `P0-13A` is accepted, and the owner explicitly
+authorized `P0-13B` as the one active card. `P0-13` and `P0-12` remain planned
+and unassigned in that order. An implementer moves the active card to `review`
+with evidence, and acceptance and queue refill remain a reviewer/coordinator
+decision unless the owner explicitly directs otherwise.
 
 ## Recently completed
 
@@ -361,6 +359,7 @@ coordinator.
 | `P0-10` | `done` | Deterministic PEP preflight, pinned acquisition, stable identity, and safe failure classification accepted. |
 | `P0-11` | `done` | Artifact-first exact-byte persistence and immutable source-version admission accepted. |
 | `P0-11A` | `done` | Source-neutral acquisition and persistence contracts accepted with reference-source policy isolated in infrastructure. |
+| `P0-13A` | `done` | Tenant-owned durable persistence with composite foreign-key isolation and populated-database migration accepted. |
 
 Detailed acceptance evidence is retained in the
 [completed-task log](docs/development/task-history.md) and Git history.

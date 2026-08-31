@@ -1,0 +1,57 @@
+"""PostgreSQL persistence for scoped HTTP idempotency results."""
+
+from __future__ import annotations
+
+from typing import cast
+
+from sqlalchemy import Connection, insert, select
+
+from contour.domain.access import Principal
+from contour.infrastructure.postgres.tables.catalog import idempotency_records
+
+
+class PostgresIdempotencyRepository:
+    """Maps replay records inside the caller's catalog transaction."""
+
+    def __init__(self, connection: Connection) -> None:
+        """Bind the repository to its caller-owned transaction connection."""
+        self._connection = connection
+
+    def get_response(
+        self, principal: Principal, scope: str, route: str, key: str
+    ) -> tuple[str, dict[str, str | None]] | None:
+        """Return the accepted payload digest and public response for an exact key."""
+        row = self._connection.execute(
+            select(idempotency_records.c.payload_digest, idempotency_records.c.response).where(
+                idempotency_records.c.principal_namespace == principal.id.namespace,
+                idempotency_records.c.principal_value == principal.id.value,
+                idempotency_records.c.scope == scope,
+                idempotency_records.c.route == route,
+                idempotency_records.c.key == key,
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        return cast(str, row.payload_digest), cast(dict[str, str | None], row.response)
+
+    def save_response(
+        self,
+        principal: Principal,
+        scope: str,
+        route: str,
+        key: str,
+        payload_digest: str,
+        response: dict[str, str | None],
+    ) -> None:
+        """Insert one result before the containing transaction commits."""
+        self._connection.execute(
+            insert(idempotency_records).values(
+                principal_namespace=principal.id.namespace,
+                principal_value=principal.id.value,
+                scope=scope,
+                route=route,
+                key=key,
+                payload_digest=payload_digest,
+                response=response,
+            )
+        )

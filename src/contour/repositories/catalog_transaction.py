@@ -7,6 +7,7 @@ from typing import Protocol, Self
 
 from contour.repositories.access import MembershipRepository, PrincipalRepository
 from contour.repositories.evidence import EvidenceRepository
+from contour.repositories.idempotency import IdempotencyRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
 from contour.repositories.tenant import TenantRepository
@@ -43,6 +44,10 @@ class CatalogUnitOfWork(Protocol):
     @property
     def evidence(self) -> EvidenceRepository:
         """Return the exact evidence repository bound to this transaction."""
+
+    @property
+    def idempotency(self) -> IdempotencyRepository:
+        """Return durable idempotency records bound to this transaction."""
 
     def __enter__(self) -> Self:
         """Begin the catalog transaction and return its repositories."""

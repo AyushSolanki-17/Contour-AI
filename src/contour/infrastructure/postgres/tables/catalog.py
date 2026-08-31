@@ -49,6 +49,31 @@ memberships = sa.Table(
     ),
 )
 
+idempotency_records = sa.Table(
+    "idempotency_records",
+    metadata,
+    sa.Column("principal_namespace", sa.Text(), nullable=False),
+    sa.Column("principal_value", sa.Text(), nullable=False),
+    sa.Column("scope", sa.Text(), nullable=False),
+    sa.Column("route", sa.Text(), nullable=False),
+    sa.Column("key", sa.Text(), nullable=False),
+    sa.Column("payload_digest", sa.String(length=64), nullable=False),
+    sa.Column("response", sa.JSON(), nullable=False),
+    sa.PrimaryKeyConstraint(
+        "principal_namespace",
+        "principal_value",
+        "scope",
+        "route",
+        "key",
+        name="pk_idempotency_records",
+    ),
+    sa.ForeignKeyConstraint(
+        ["principal_namespace", "principal_value"],
+        ["principals.namespace", "principals.value"],
+        name="fk_idempotency_records_principal",
+    ),
+)
+
 workspaces = sa.Table(
     "workspaces",
     metadata,

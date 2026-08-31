@@ -10,9 +10,13 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from contour import __version__
+from contour.api.cursor import CursorCodec
 from contour.api.error_handler import register_exception_handlers
 from contour.api.routes.health import create_health_router
+from contour.api.routes.product import create_product_router
+from contour.services.authentication import CredentialVerifier
 from contour.services.health_service import HealthService
+from contour.services.product_service import ProductCatalogService
 
 type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
@@ -20,12 +24,18 @@ type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 def create_app(
     *,
     health_service: HealthService,
+    product_service: ProductCatalogService | None = None,
+    credential_verifier: CredentialVerifier | None = None,
+    cursor_secret: str = "contract-only-cursor-secret",
     lifespan: AppLifespan | None = None,
 ) -> FastAPI:
     """Create the HTTP adapter from constructed application services.
 
     Args:
         health_service: Framework-independent health use cases to expose.
+        product_service: Optional authenticated product collection use cases.
+        credential_verifier: Optional bearer-credential adapter for product routes.
+        cursor_secret: Server-side secret used to bind collection cursor tokens.
         lifespan: Optional process-resource lifecycle owned by composition.
 
     Returns:
@@ -34,6 +44,10 @@ def create_app(
     app = FastAPI(title="Contour", version=__version__, lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(create_health_router(health_service))
+    if product_service is not None and credential_verifier is not None:
+        app.include_router(
+            create_product_router(product_service, credential_verifier, CursorCodec(cursor_secret))
+        )
     app.openapi = _openapi_without_framework_validation_errors(app)  # type: ignore[method-assign]
     return app
 

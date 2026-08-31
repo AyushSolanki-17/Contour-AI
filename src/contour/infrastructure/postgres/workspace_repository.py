@@ -38,6 +38,27 @@ class PostgresWorkspaceRepository:
             tuple((item[0], item[1]) for item in cast(list[list[str]], row["settings"])),
         )
 
+    def list_workspaces(self, access: AccessContext) -> tuple[Workspace, ...]:
+        """Return tenant-visible workspaces in stable identity order."""
+        rows = self._connection.execute(
+            select(workspaces)
+            .where(
+                workspaces.c.tenant_namespace == access.tenant_id.namespace,
+                workspaces.c.tenant_value == access.tenant_id.value,
+            )
+            .order_by(workspaces.c.namespace, workspaces.c.value)
+        ).mappings()
+        return tuple(
+            Workspace(
+                WorkspaceId(cast(str, row["namespace"]), cast(str, row["value"])),
+                TenantId(cast(str, row["tenant_namespace"]), cast(str, row["tenant_value"])),
+                cast(str, row["name"]),
+                cast(str, row["owner_name"]),
+                tuple((item[0], item[1]) for item in cast(list[list[str]], row["settings"])),
+            )
+            for row in rows
+        )
+
     def save_workspace(self, access: AccessContext, workspace: Workspace) -> None:
         """Insert a workspace and let database constraints reject conflicts."""
         if not access.permits(workspace.tenant_id):

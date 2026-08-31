@@ -5,9 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import cast
 
 from contour.api.app import create_app
+from contour.repositories.catalog_transaction import CatalogTransactionManager
+from contour.services.authentication import StaticCredentialVerifier
 from contour.services.health_service import HealthService
+from contour.services.product_service import ProductCatalogService
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "openapi" / "contour.openapi.json"
@@ -26,7 +30,13 @@ def render_contract() -> str:
     Returns:
         Canonical OpenAPI JSON with a trailing newline.
     """
-    app = create_app(health_service=HealthService(ContractReadinessProbe()))
+    app = create_app(
+        health_service=HealthService(ContractReadinessProbe()),
+        product_service=ProductCatalogService(
+            cast(CatalogTransactionManager, object()), frozenset({"pep"})
+        ),
+        credential_verifier=StaticCredentialVerifier({}),
+    )
     return json.dumps(app.openapi(), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 

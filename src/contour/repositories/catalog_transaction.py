@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Protocol, Self
 
+from contour.repositories.access import MembershipRepository, PrincipalRepository
 from contour.repositories.evidence import EvidenceRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
@@ -18,6 +19,14 @@ class CatalogUnitOfWork(Protocol):
     @property
     def tenants(self) -> TenantRepository:
         """Return the tenant repository bound to this transaction."""
+
+    @property
+    def principals(self) -> PrincipalRepository:
+        """Return the principal repository bound to this transaction."""
+
+    @property
+    def memberships(self) -> MembershipRepository:
+        """Return the membership repository bound to this transaction."""
 
     @property
     def workspaces(self) -> WorkspaceRepository:

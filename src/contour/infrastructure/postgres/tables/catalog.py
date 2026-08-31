@@ -15,6 +15,40 @@ tenants = sa.Table(
     sa.PrimaryKeyConstraint("namespace", "value", name="pk_tenants"),
 )
 
+principals = sa.Table(
+    "principals",
+    metadata,
+    sa.Column("namespace", sa.Text(), nullable=False),
+    sa.Column("value", sa.Text(), nullable=False),
+    sa.PrimaryKeyConstraint("namespace", "value", name="pk_principals"),
+)
+
+memberships = sa.Table(
+    "memberships",
+    metadata,
+    sa.Column("principal_namespace", sa.Text(), nullable=False),
+    sa.Column("principal_value", sa.Text(), nullable=False),
+    sa.Column("tenant_namespace", sa.Text(), nullable=False),
+    sa.Column("tenant_value", sa.Text(), nullable=False),
+    sa.PrimaryKeyConstraint(
+        "principal_namespace",
+        "principal_value",
+        "tenant_namespace",
+        "tenant_value",
+        name="pk_memberships",
+    ),
+    sa.ForeignKeyConstraint(
+        ["principal_namespace", "principal_value"],
+        ["principals.namespace", "principals.value"],
+        name="fk_memberships_principal",
+    ),
+    sa.ForeignKeyConstraint(
+        ["tenant_namespace", "tenant_value"],
+        ["tenants.namespace", "tenants.value"],
+        name="fk_memberships_tenant",
+    ),
+)
+
 workspaces = sa.Table(
     "workspaces",
     metadata,

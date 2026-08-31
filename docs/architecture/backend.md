@@ -356,9 +356,10 @@ non-null Tenant and Workspace tuple on every catalog, knowledge, and execution
 record. Composite foreign keys bind sources, immutable versions, evidence,
 evidence attachments, relationship endpoints, jobs, and runs to that same
 tuple, so cross-owner associations fail atomically even for otherwise valid
-identifiers. Principal, Membership, verified Access Context, and tenant-scoped
-service queries remain the next application-boundary increment; they are not
-implied by the persistence layer alone.
+identifiers. Principals and Memberships are durable PostgreSQL records.
+Product services derive a verified Access Context from Membership, then carry
+its Tenant scope through Workspace, catalog, knowledge, execution, and
+artifact-facing operations. A selector is never accepted as access proof.
 
 Artifact storage is authoritative for acquired bytes, large normalized artifacts, extraction/evaluation outputs, and reproducibility manifests. Every artifact reference includes an integrity digest.
 

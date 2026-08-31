@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from contour.domain.access import AccessContext
 from contour.domain.relationship import Relationship, RelationshipId
 
 
 class RelationshipRepository(Protocol):
     """Persists directed relationships together with their edge-level evidence."""
 
-    def get_relationship(self, relationship_id: RelationshipId) -> Relationship | None:
+    def get_relationship(
+        self, access: AccessContext, relationship_id: RelationshipId
+    ) -> Relationship | None:
         """Return a relationship and its ordered exact evidence, if admitted."""
 
-    def save_relationship(self, relationship: Relationship) -> None:
+    def save_relationship(self, access: AccessContext, relationship: Relationship) -> None:
         """Insert a relationship only when its endpoints and evidence exist."""

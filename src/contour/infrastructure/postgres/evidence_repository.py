@@ -6,6 +6,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.evidence import EvidenceId, EvidenceLocator
 from contour.domain.source import SourceId
 from contour.domain.source_version import ContentDigest, SourceVersionId
@@ -21,7 +22,9 @@ class PostgresEvidenceRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_evidence(self, evidence_id: EvidenceId) -> EvidenceLocator | None:
+    def get_evidence(
+        self, access: AccessContext, evidence_id: EvidenceId
+    ) -> EvidenceLocator | None:
         """Return evidence with its immutable source-version identity."""
         statement = select(
             evidence.c.tenant_namespace,
@@ -37,6 +40,8 @@ class PostgresEvidenceRepository:
         ).where(
             evidence.c.namespace == evidence_id.namespace,
             evidence.c.value == evidence_id.value,
+            evidence.c.tenant_namespace == access.tenant_id.namespace,
+            evidence.c.tenant_value == access.tenant_id.value,
         )
         row = self._connection.execute(statement).mappings().one_or_none()
         if row is None:
@@ -54,8 +59,12 @@ class PostgresEvidenceRepository:
             cast(int | None, row["end_offset"]),
         )
 
-    def save_evidence(self, evidence_id: EvidenceId, locator: EvidenceLocator) -> None:
+    def save_evidence(
+        self, access: AccessContext, evidence_id: EvidenceId, locator: EvidenceLocator
+    ) -> None:
         """Insert exact evidence bound by foreign key to one source version."""
+        if not access.permits(locator.tenant_id):
+            raise ValueError("evidence is outside access scope")
         version_id = locator.source_version_id
         statement = insert(evidence).values(
             namespace=evidence_id.namespace,

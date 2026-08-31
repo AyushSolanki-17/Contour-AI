@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from contour.domain.access import AccessContext
 from contour.domain.acquired_content import AcquiredContent
 from contour.domain.source import Source
 from contour.domain.source_version import SourceVersion, SourceVersionId
 from contour.domain.time_point import TimePoint
 from contour.repositories.artifact import ArtifactRepository, ArtifactWriteState
 from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.catalog_errors import CatalogConflictError, CatalogReferenceError
+from contour.services.access_errors import ResourceNotFoundError
+from contour.services.catalog_errors import CatalogConflictError
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +35,9 @@ class SourcePersistenceService:
         self._artifacts = artifacts
         self._transactions = transactions
 
-    def persist(self, acquired: AcquiredContent) -> SourcePersistenceResult:
+    def persist(
+        self, *, access: AccessContext, acquired: AcquiredContent
+    ) -> SourcePersistenceResult:
         """Persist exact bytes and return the first accepted immutable version.
 
         The artifact is written and integrity-checked before PostgreSQL. A
@@ -47,13 +51,13 @@ class SourcePersistenceService:
             ArtifactPersistenceError: If artifact persistence cannot finish safely.
             CatalogConflictError: If accepted metadata would be rewritten.
             CatalogPersistenceError: If PostgreSQL persistence fails.
-            CatalogReferenceError: If the logical source is not accepted.
+            ResourceNotFoundError: If the logical source is unknown or inaccessible.
         """
         if not isinstance(acquired, AcquiredContent):
             raise TypeError("acquired must be AcquiredContent")
 
+        source = self._source_for(access, acquired)
         artifact_state = self._artifacts.persist(acquired.content, acquired.content_digest)
-        source = self._source_for(acquired)
         version = SourceVersion(
             id=SourceVersionId(acquired.source_id, acquired.content_digest),
             tenant_id=source.tenant_id,
@@ -67,37 +71,39 @@ class SourcePersistenceService:
         )
 
         try:
-            accepted = self._admit_or_get(version)
+            accepted = self._admit_or_get(access, version)
         except CatalogConflictError:
-            retry_winner = self._get_retry_winner(version)
+            retry_winner = self._get_retry_winner(access, version)
             if retry_winner is None:
                 raise
             accepted = retry_winner
         return SourcePersistenceResult(accepted, artifact_state)
 
-    def _source_for(self, acquired: AcquiredContent) -> Source:
+    def _source_for(self, access: AccessContext, acquired: AcquiredContent) -> Source:
         """Return the accepted source needed to bind a version to its owner."""
         with self._transactions.transaction() as transaction:
-            source = transaction.sources.get_source(acquired.source_id)
+            source = transaction.sources.get_source(access, acquired.source_id)
         if source is None:
-            raise CatalogReferenceError()
+            raise ResourceNotFoundError()
         return source
 
-    def _admit_or_get(self, candidate: SourceVersion) -> SourceVersion:
+    def _admit_or_get(self, access: AccessContext, candidate: SourceVersion) -> SourceVersion:
         """Return an equivalent accepted version or insert the candidate."""
         with self._transactions.transaction() as transaction:
-            existing = transaction.source_versions.get_source_version(candidate.id)
+            existing = transaction.source_versions.get_source_version(access, candidate.id)
             if existing is not None:
                 if _matches_admission(existing, candidate):
                     return existing
                 raise CatalogConflictError()
-            transaction.source_versions.save_source_version(candidate)
+            transaction.source_versions.save_source_version(access, candidate)
         return candidate
 
-    def _get_retry_winner(self, candidate: SourceVersion) -> SourceVersion | None:
+    def _get_retry_winner(
+        self, access: AccessContext, candidate: SourceVersion
+    ) -> SourceVersion | None:
         """Resolve an identical concurrent insert after its transaction commits."""
         with self._transactions.transaction() as transaction:
-            existing = transaction.source_versions.get_source_version(candidate.id)
+            existing = transaction.source_versions.get_source_version(access, candidate.id)
         if existing is not None and _matches_admission(existing, candidate):
             return existing
         return None

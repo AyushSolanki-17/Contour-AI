@@ -7,6 +7,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.entity import Entity, EntityId
 from contour.domain.evidence import EvidenceId
 from contour.domain.tenant import TenantId
@@ -22,13 +23,15 @@ class PostgresEntityRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_entity(self, entity_id: EntityId) -> Entity | None:
+    def get_entity(self, access: AccessContext, entity_id: EntityId) -> Entity | None:
         """Return an entity with all exact evidence attachments in stored order."""
         row = (
             self._connection.execute(
                 select(entities).where(
                     entities.c.namespace == entity_id.namespace,
                     entities.c.value == entity_id.value,
+                    entities.c.tenant_namespace == access.tenant_id.namespace,
+                    entities.c.tenant_value == access.tenant_id.value,
                 )
             )
             .mappings()
@@ -62,8 +65,10 @@ class PostgresEntityRepository:
             TimePoint(cast(datetime | None, row["transaction_time"])),
         )
 
-    def save_entity(self, entity: Entity) -> None:
+    def save_entity(self, access: AccessContext, entity: Entity) -> None:
         """Insert an entity and all mandatory evidence attachments atomically."""
+        if not access.permits(entity.tenant_id):
+            raise ValueError("entity is outside access scope")
         self._connection.execute(
             insert(entities).values(
                 namespace=entity.id.namespace,

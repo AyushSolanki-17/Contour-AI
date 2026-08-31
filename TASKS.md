@@ -1,7 +1,7 @@
 # Contour Active Work
 
-**Status:** one principal-membership card in progress; two dependency-gated follow-ups
-**Updated:** 2026-08-30
+**Status:** one principal-membership card in review; two dependency-gated follow-ups
+**Updated:** 2026-08-31
 
 This is the bounded execution queue for work promoted from the ordered
 [backend roadmap](docs/development/roadmap.md). Claim exactly one `ready` card
@@ -116,7 +116,7 @@ associations even when an application caller supplies valid foreign IDs.
 Owner role: backend
 Assignee: Codex
 Priority: P0
-Status: in_progress
+Status: review
 Depends on: `P0-13A` (accepted)
 Product: `PROD-P0-01`
 Contract: transport-neutral application boundary; no new HTTP routes
@@ -165,17 +165,33 @@ above persistence before HTTP routes are published.
 
 #### Acceptance criteria
 
-- [ ] Two Principals can own separate Tenants and can observe only their own
+- [x] Two Principals can own separate Tenants and can observe only their own
       Tenant, Workspace, Source, Evidence, Entity, Relationship, Job, and Run
       state through application services.
-- [ ] Foreign and guessed nested IDs produce the same safe inaccessible result
+- [x] Foreign and guessed nested IDs produce the same safe inaccessible result
       as an unknown ID and cause no durable mutation.
-- [ ] No product-facing service or repository entry point can be invoked without
+- [x] No product-facing service or repository entry point can be invoked without
       a verified Access Context.
-- [ ] Logs/errors from the focused checks include safe correlation scope but no
+- [x] Logs/errors from the focused checks include safe correlation scope but no
       credential, source content, or foreign-object detail.
-- [ ] Focused service, persistence, architecture, quality, documentation, and
+- [x] Focused service, persistence, architecture, quality, documentation, and
       unchanged health-contract checks pass.
+
+#### Verification evidence
+
+- `make quality` passed: formatting, linting, strict typing, default tests
+  (37 passed, 8 integration tests skipped), and unchanged health-only OpenAPI
+  drift verification.
+- `make docs` and `make precommit` passed. `uv run python -m compileall -q src
+  tests migrations` and integration-suite collection both passed.
+- Local `make db-up` could not start PostgreSQL because the Docker daemon socket
+  was unavailable. Pull-request CI subsequently passed its isolated PostgreSQL
+  migration and persistence suite (45 passed).
+- Test delta: one focused unit module adds the bootstrap, visible-Tenant, and
+  non-enumerating foreign/unknown selector behaviors; existing catalog,
+  immutable-source, knowledge/execution, tenant-isolation, and migration cases
+  now carry Access Context. No tests were removed or consolidated. The default
+  suite completed in 0.26 seconds.
 
 ### P0-13 — Publish the authenticated tenant/workspace/source contract
 

@@ -9,6 +9,10 @@ from sqlalchemy import Connection, Engine
 from sqlalchemy.engine import RootTransaction
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from contour.infrastructure.postgres.access_repository import (
+    PostgresMembershipRepository,
+    PostgresPrincipalRepository,
+)
 from contour.infrastructure.postgres.evidence_repository import PostgresEvidenceRepository
 from contour.infrastructure.postgres.source_repository import PostgresSourceRepository
 from contour.infrastructure.postgres.source_version_repository import (
@@ -16,6 +20,7 @@ from contour.infrastructure.postgres.source_version_repository import (
 )
 from contour.infrastructure.postgres.tenant_repository import PostgresTenantRepository
 from contour.infrastructure.postgres.workspace_repository import PostgresWorkspaceRepository
+from contour.repositories.access import MembershipRepository, PrincipalRepository
 from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.repositories.evidence import EvidenceRepository
 from contour.repositories.source import SourceRepository
@@ -50,6 +55,8 @@ class PostgresCatalogUnitOfWork:
         self._connection: Connection | None = None
         self._transaction: RootTransaction | None = None
         self._tenants: TenantRepository | None = None
+        self._principals: PrincipalRepository | None = None
+        self._memberships: MembershipRepository | None = None
         self._workspaces: WorkspaceRepository | None = None
         self._sources: SourceRepository | None = None
         self._source_versions: SourceVersionRepository | None = None
@@ -59,6 +66,16 @@ class PostgresCatalogUnitOfWork:
     def tenants(self) -> TenantRepository:
         """Return the tenant repository in the active transaction."""
         return self._require_active(self._tenants, name="tenant repository")
+
+    @property
+    def principals(self) -> PrincipalRepository:
+        """Return the principal repository in the active transaction."""
+        return self._require_active(self._principals, name="principal repository")
+
+    @property
+    def memberships(self) -> MembershipRepository:
+        """Return the membership repository in the active transaction."""
+        return self._require_active(self._memberships, name="membership repository")
 
     @property
     def workspaces(self) -> WorkspaceRepository:
@@ -94,6 +111,8 @@ class PostgresCatalogUnitOfWork:
         self._connection = connection
         self._transaction = transaction
         self._tenants = PostgresTenantRepository(connection)
+        self._principals = PostgresPrincipalRepository(connection)
+        self._memberships = PostgresMembershipRepository(connection)
         self._workspaces = PostgresWorkspaceRepository(connection)
         self._sources = PostgresSourceRepository(connection)
         self._source_versions = PostgresSourceVersionRepository(connection)
@@ -136,6 +155,8 @@ class PostgresCatalogUnitOfWork:
         self._connection = None
         self._transaction = None
         self._tenants = None
+        self._principals = None
+        self._memberships = None
         self._workspaces = None
         self._sources = None
         self._source_versions = None

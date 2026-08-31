@@ -7,6 +7,7 @@ evidence-backed knowledge; jobs and runs retain durable execution state; and
 time represents a known instant or an explicit unknown.
 """
 
+from contour.domain.access import AccessContext, Membership, Principal, PrincipalId
 from contour.domain.acquired_content import AcquiredContent
 from contour.domain.entity import Entity, EntityId
 from contour.domain.evidence import EvidenceId, EvidenceLocator
@@ -21,6 +22,7 @@ from contour.domain.workspace import Workspace, WorkspaceId
 
 __all__ = [
     "AcquiredContent",
+    "AccessContext",
     "ContentDigest",
     "Entity",
     "EntityId",
@@ -28,6 +30,9 @@ __all__ = [
     "EvidenceLocator",
     "Job",
     "JobId",
+    "Membership",
+    "Principal",
+    "PrincipalId",
     "Relationship",
     "RelationshipId",
     "Run",

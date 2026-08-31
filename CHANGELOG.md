@@ -19,6 +19,10 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Provider-neutral Principal and uniform Membership persistence with verified,
+  correlation-safe Access Contexts for tenant-scoped catalog, knowledge,
+  execution, and immutable-source operations. Foreign and unknown Tenant
+  selectors share the same non-enumerating application outcome.
 - Durable Tenant ownership for Workspaces, Sources, immutable Versions,
   Evidence, Entities, Relationships, Jobs, and Runs. PostgreSQL composite
   foreign keys now reject cross-owner evidence, relationship, and run links;

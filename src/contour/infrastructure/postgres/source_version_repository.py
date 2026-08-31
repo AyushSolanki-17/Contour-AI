@@ -7,6 +7,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.source_version import SourceVersion, SourceVersionId
 from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
@@ -21,7 +22,9 @@ class PostgresSourceVersionRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_source_version(self, version_id: SourceVersionId) -> SourceVersion | None:
+    def get_source_version(
+        self, access: AccessContext, version_id: SourceVersionId
+    ) -> SourceVersion | None:
         """Return an immutable source version by content identity."""
         statement = select(
             source_versions.c.tenant_namespace,
@@ -36,6 +39,8 @@ class PostgresSourceVersionRepository:
             source_versions.c.source_namespace == version_id.source_id.namespace,
             source_versions.c.source_value == version_id.source_id.value,
             source_versions.c.content_digest == version_id.content_digest.value,
+            source_versions.c.tenant_namespace == access.tenant_id.namespace,
+            source_versions.c.tenant_value == access.tenant_id.value,
         )
         row = self._connection.execute(statement).mappings().one_or_none()
         if row is None:
@@ -52,8 +57,10 @@ class PostgresSourceVersionRepository:
             TimePoint(cast(datetime | None, row["revision_time"])),
         )
 
-    def save_source_version(self, version: SourceVersion) -> None:
+    def save_source_version(self, access: AccessContext, version: SourceVersion) -> None:
         """Insert immutable version metadata without replacing prior content."""
+        if not access.permits(version.tenant_id):
+            raise ValueError("source version is outside access scope")
         statement = insert(source_versions).values(
             source_namespace=version.source_id.namespace,
             source_value=version.source_id.value,

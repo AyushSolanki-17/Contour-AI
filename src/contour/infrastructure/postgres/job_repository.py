@@ -7,6 +7,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.job import Job, JobId, JobStatus
 from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
@@ -21,12 +22,15 @@ class PostgresJobRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_job(self, job_id: JobId) -> Job | None:
+    def get_job(self, access: AccessContext, job_id: JobId) -> Job | None:
         """Return a durable job including its explicit lifecycle state."""
         row = (
             self._connection.execute(
                 select(jobs).where(
-                    jobs.c.namespace == job_id.namespace, jobs.c.value == job_id.value
+                    jobs.c.namespace == job_id.namespace,
+                    jobs.c.value == job_id.value,
+                    jobs.c.tenant_namespace == access.tenant_id.namespace,
+                    jobs.c.tenant_value == access.tenant_id.value,
                 )
             )
             .mappings()
@@ -43,8 +47,10 @@ class PostgresJobRepository:
             cast(JobStatus, row["status"]),
         )
 
-    def save_job(self, job: Job) -> None:
+    def save_job(self, access: AccessContext, job: Job) -> None:
         """Insert a durable request and let constraints reject conflicts or orphans."""
+        if not access.permits(job.tenant_id):
+            raise ValueError("job is outside access scope")
         self._connection.execute(
             insert(jobs).values(
                 namespace=job.id.namespace,

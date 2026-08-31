@@ -14,6 +14,7 @@ from alembic.config import Config
 from psycopg import sql
 
 from contour.domain import (
+    AccessContext,
     ContentDigest,
     Entity,
     EntityId,
@@ -21,6 +22,9 @@ from contour.domain import (
     EvidenceLocator,
     Job,
     JobId,
+    Membership,
+    Principal,
+    PrincipalId,
     Source,
     SourceId,
     SourceVersion,
@@ -91,6 +95,12 @@ def _catalog_record(
     return tenant, workspace, source, version, evidence_id, locator
 
 
+def _access(tenant: Tenant) -> AccessContext:
+    """Return a fixed verified scope for one isolated integration tenant."""
+    principal = Principal(PrincipalId("TEST", f"operator-{tenant.id.value}"))
+    return AccessContext(principal, Membership(principal.id, tenant.id), "isolation-test")
+
+
 def _admit_catalogs(
     manager: PostgresCatalogTransactionManager,
 ) -> tuple[
@@ -102,7 +112,11 @@ def _admit_catalogs(
     second = _catalog_record("b")
     service = CatalogAdmissionService(manager)
     for tenant, workspace, source, version, evidence_id, locator in (first, second):
+        access = _access(tenant)
+        with manager.transaction() as transaction:
+            transaction.tenants.save_tenant(tenant)
         service.admit(
+            access=access,
             tenant=tenant,
             workspace=workspace,
             source=source,
@@ -147,9 +161,9 @@ def _save_entities_and_job(
         TimePoint.unknown(),
     )
     with manager.transaction() as transaction:
-        transaction.entities.save_entity(first_entity)
-        transaction.entities.save_entity(second_entity)
-        transaction.jobs.save_job(second_job)
+        transaction.entities.save_entity(_access(first_tenant), first_entity)
+        transaction.entities.save_entity(_access(second_tenant), second_entity)
+        transaction.jobs.save_job(_access(second_tenant), second_job)
     return first_entity, second_entity, second_job
 
 

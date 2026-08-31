@@ -1,7 +1,7 @@
 # Completed Task Log
 
 **Status:** append-only execution summary
-**Updated:** 2026-08-30
+**Updated:** 2026-08-31
 
 This log preserves concise outcomes after completed cards leave
 [the active queue](../../TASKS.md). It is an engineering handoff index, not a
@@ -28,3 +28,4 @@ the first accepted task is recorded.
 | `P0-11` | 2026-08-26 | Artifact-first persistence of exact acquired PEP bytes with integrity verification, immutable source-version admission, idempotent retries, explicit conflicts, and recoverable partial failures. | `a05e8fd feat: persist acquired PEP source versions` |
 | `P0-11A` | 2026-08-26 | Source-neutral acquired-content and immutable-persistence contracts with PEP validation, fixture behavior, and source policy isolated in infrastructure. | `b995025 refactor: decouple source persistence from PEP adapters` |
 | `P0-13A` | 2026-08-30 | Tenant-owned durable persistence across catalog, knowledge, and execution records; composite foreign keys reject cross-owner links and the tracked migration backfills legacy state atomically. | [PR #10](https://github.com/AyushSolanki-17/Contour-AI/pull/10), [PR #12](https://github.com/AyushSolanki-17/Contour-AI/pull/12) |
+| `P0-13B` | 2026-08-31 | Provider-neutral principals, uniform memberships, verified access contexts, and non-enumerating tenant-scoped service access. | [PR #13](https://github.com/AyushSolanki-17/Contour-AI/pull/13) |

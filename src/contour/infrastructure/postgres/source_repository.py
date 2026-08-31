@@ -6,6 +6,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.source import Source, SourceId
 from contour.domain.tenant import TenantId
 from contour.domain.workspace import WorkspaceId
@@ -19,11 +20,13 @@ class PostgresSourceRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_source(self, source_id: SourceId) -> Source | None:
+    def get_source(self, access: AccessContext, source_id: SourceId) -> Source | None:
         """Return a logical source by stable identity, if visible."""
         statement = select(sources).where(
             sources.c.namespace == source_id.namespace,
             sources.c.value == source_id.value,
+            sources.c.tenant_namespace == access.tenant_id.namespace,
+            sources.c.tenant_value == access.tenant_id.value,
         )
         row = self._connection.execute(statement).mappings().one_or_none()
         if row is None:
@@ -39,8 +42,10 @@ class PostgresSourceRepository:
             cast(str, row["data_classification"]),
         )
 
-    def save_source(self, source: Source) -> None:
+    def save_source(self, access: AccessContext, source: Source) -> None:
         """Insert a logical source and let constraints reject bad references."""
+        if not access.permits(source.tenant_id):
+            raise ValueError("source is outside access scope")
         statement = insert(sources).values(
             namespace=source.id.namespace,
             value=source.id.value,

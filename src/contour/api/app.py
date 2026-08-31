@@ -12,9 +12,7 @@ from fastapi.openapi.utils import get_openapi
 from contour import __version__
 from contour.api.error_handler import register_exception_handlers
 from contour.api.routes.health import create_health_router
-from contour.api.routes.workspace_source import create_workspace_source_router
 from contour.services.health_service import HealthService
-from contour.services.workspace_source_service import WorkspaceSourceService
 
 type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
@@ -22,14 +20,12 @@ type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 def create_app(
     *,
     health_service: HealthService,
-    workspace_source_service: WorkspaceSourceService,
     lifespan: AppLifespan | None = None,
 ) -> FastAPI:
     """Create the HTTP adapter from constructed application services.
 
     Args:
         health_service: Framework-independent health use cases to expose.
-        workspace_source_service: Workspace and source product use cases to expose.
         lifespan: Optional process-resource lifecycle owned by composition.
 
     Returns:
@@ -38,7 +34,6 @@ def create_app(
     app = FastAPI(title="Contour", version=__version__, lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(create_health_router(health_service))
-    app.include_router(create_workspace_source_router(workspace_source_service))
     app.openapi = _openapi_without_framework_validation_errors(app)  # type: ignore[method-assign]
     return app
 

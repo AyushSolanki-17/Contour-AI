@@ -7,6 +7,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
+from contour.domain.access import AccessContext
 from contour.domain.job import JobId
 from contour.domain.run import Run, RunId, RunStatus
 from contour.domain.tenant import TenantId
@@ -22,12 +23,15 @@ class PostgresRunRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_run(self, run_id: RunId) -> Run | None:
+    def get_run(self, access: AccessContext, run_id: RunId) -> Run | None:
         """Return a run attempt including its terminal or active lifecycle state."""
         row = (
             self._connection.execute(
                 select(runs).where(
-                    runs.c.namespace == run_id.namespace, runs.c.value == run_id.value
+                    runs.c.namespace == run_id.namespace,
+                    runs.c.value == run_id.value,
+                    runs.c.tenant_namespace == access.tenant_id.namespace,
+                    runs.c.tenant_value == access.tenant_id.value,
                 )
             )
             .mappings()
@@ -44,8 +48,10 @@ class PostgresRunRepository:
             cast(RunStatus, row["status"]),
         )
 
-    def save_run(self, run: Run) -> None:
+    def save_run(self, access: AccessContext, run: Run) -> None:
         """Insert one distinct attempt linked by foreign key to its job request."""
+        if not access.permits(run.tenant_id):
+            raise ValueError("run is outside access scope")
         self._connection.execute(
             insert(runs).values(
                 namespace=run.id.namespace,

@@ -12,15 +12,17 @@ date without rewriting what was actually delivered.
 
 ### Fixed
 
+- Removed unpublished trusted-local workspace and source routes so the public
+  contract remains health-only until authenticated tenant scoping is available.
 - PostgreSQL now rejects exact-evidence spans that specify only one offset,
   matching the domain's both-or-neither locator invariant.
 
 ### Added
 
-- Versioned trusted-local workspace and logical-source PUT/GET APIs with
-  caller-owned canonical identifiers, exact-replay idempotency, immutable
-  conflict handling, workspace-scoped inspection, supported-source validation,
-  stable common errors, and a regenerated frontend-consumable contract.
+- Provider-neutral Principal and uniform Membership persistence with verified,
+  correlation-safe Access Contexts for tenant-scoped catalog, knowledge,
+  execution, and immutable-source operations. Foreign and unknown Tenant
+  selectors share the same non-enumerating application outcome.
 - Durable Tenant ownership for Workspaces, Sources, immutable Versions,
   Evidence, Entities, Relationships, Jobs, and Runs. PostgreSQL composite
   foreign keys now reject cross-owner evidence, relationship, and run links;

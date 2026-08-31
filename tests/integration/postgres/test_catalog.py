@@ -14,6 +14,7 @@ from alembic.config import Config
 from psycopg import sql
 
 from contour.domain import (
+    AccessContext,
     ContentDigest,
     Entity,
     EntityId,
@@ -21,6 +22,9 @@ from contour.domain import (
     EvidenceLocator,
     Job,
     JobId,
+    Membership,
+    Principal,
+    PrincipalId,
     Relationship,
     RelationshipId,
     Run,
@@ -93,6 +97,12 @@ def _catalog_records() -> tuple[
     return tenant, workspace, source, version, evidence_id, evidence
 
 
+def _access(tenant: Tenant) -> AccessContext:
+    """Return a fixed verified scope for one isolated integration tenant."""
+    principal = Principal(PrincipalId("TEST", "catalog-operator"))
+    return AccessContext(principal, Membership(principal.id, tenant.id), "catalog-test")
+
+
 @pytest.mark.integration
 def test_catalog_records_round_trip_and_reject_invalid_references(
     monkeypatch: pytest.MonkeyPatch,
@@ -120,7 +130,11 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
             )
             manager = PostgresCatalogTransactionManager(engine)
             tenant, workspace, source, version, evidence_id, evidence = _catalog_records()
+            access = _access(tenant)
+            with manager.transaction() as transaction:
+                transaction.tenants.save_tenant(tenant)
             CatalogAdmissionService(manager).admit(
+                access=access,
                 tenant=tenant,
                 workspace=workspace,
                 source=source,
@@ -130,10 +144,10 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
             )
 
             with manager.transaction() as transaction:
-                assert transaction.workspaces.get_workspace(workspace.id) == workspace
-                assert transaction.sources.get_source(source.id) == source
-                assert transaction.source_versions.get_source_version(version.id) == version
-                assert transaction.evidence.get_evidence(evidence_id) == evidence
+                assert transaction.workspaces.get_workspace(access, workspace.id) == workspace
+                assert transaction.sources.get_source(access, source.id) == source
+                assert transaction.source_versions.get_source_version(access, version.id) == version
+                assert transaction.evidence.get_evidence(access, evidence_id) == evidence
 
             with pytest.raises(sa.exc.IntegrityError, match="ck_evidence_valid_span"):
                 with engine.begin() as connection:
@@ -156,12 +170,13 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
 
             with pytest.raises(CatalogConflictError):
                 with manager.transaction() as transaction:
-                    transaction.workspaces.save_workspace(workspace)
+                    transaction.workspaces.save_workspace(access, workspace)
 
             conflicting_digest = ContentDigest("b" * 64)
             with pytest.raises(CatalogConflictError):
                 with manager.transaction() as transaction:
                     transaction.source_versions.save_source_version(
+                        access,
                         SourceVersion(
                             SourceVersionId(source.id, conflicting_digest),
                             tenant.id,
@@ -172,12 +187,13 @@ def test_catalog_records_round_trip_and_reject_invalid_references(
                             version.upstream_revision,
                             version.source_time,
                             version.revision_time,
-                        )
+                        ),
                     )
 
             with pytest.raises(CatalogReferenceError):
                 with manager.transaction() as transaction:
                     transaction.evidence.save_evidence(
+                        access,
                         EvidenceId("EVIDENCE", "orphan"),
                         EvidenceLocator(
                             tenant.id,
@@ -227,11 +243,15 @@ def test_failed_catalog_transaction_rolls_back_all_prior_writes(
             )
             manager = PostgresCatalogTransactionManager(engine)
             tenant, workspace, source, _, _, _ = _catalog_records()
+            access = _access(tenant)
+            with manager.transaction() as transaction:
+                transaction.tenants.save_tenant(tenant)
 
             with pytest.raises(CatalogReferenceError):
                 with manager.transaction() as transaction:
-                    transaction.workspaces.save_workspace(workspace)
+                    transaction.workspaces.save_workspace(access, workspace)
                     transaction.sources.save_source(
+                        access,
                         Source(
                             source.id,
                             tenant.id,
@@ -241,11 +261,11 @@ def test_failed_catalog_transaction_rolls_back_all_prior_writes(
                             source.scope,
                             source.license,
                             source.data_classification,
-                        )
+                        ),
                     )
 
             with manager.transaction() as transaction:
-                assert transaction.workspaces.get_workspace(workspace.id) is None
+                assert transaction.workspaces.get_workspace(access, workspace.id) is None
         finally:
             if engine is not None:
                 engine.dispose()
@@ -287,7 +307,11 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
             )
             catalog_manager = PostgresCatalogTransactionManager(engine)
             tenant, workspace, source, version, evidence_id, locator = _catalog_records()
+            access = _access(tenant)
+            with catalog_manager.transaction() as transaction:
+                transaction.tenants.save_tenant(tenant)
             CatalogAdmissionService(catalog_manager).admit(
+                access=access,
                 tenant=tenant,
                 workspace=workspace,
                 source=source,
@@ -350,43 +374,51 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
             )
             record_manager = PostgresRecordTransactionManager(engine)
             service = RecordPersistenceService(record_manager)
-            service.admit_knowledge(entities=(entity_a, entity_b), relationship=relationship)
-            service.record_execution(job=job, runs=(failed_run, cancelled_run))
+            service.admit_knowledge(
+                access=access, entities=(entity_a, entity_b), relationship=relationship
+            )
+            service.record_execution(access=access, job=job, runs=(failed_run, cancelled_run))
 
             with record_manager.transaction() as transaction:
-                assert transaction.entities.get_entity(entity_a.id) == entity_a
-                assert transaction.relationships.get_relationship(relationship.id) == relationship
-                assert transaction.jobs.get_job(job.id) == job
-                assert transaction.runs.get_run(failed_run.id) == failed_run
-                assert transaction.runs.get_run(cancelled_run.id) == cancelled_run
+                assert transaction.entities.get_entity(access, entity_a.id) == entity_a
+                assert (
+                    transaction.relationships.get_relationship(access, relationship.id)
+                    == relationship
+                )
+                assert transaction.jobs.get_job(access, job.id) == job
+                assert transaction.runs.get_run(access, failed_run.id) == failed_run
+                assert transaction.runs.get_run(access, cancelled_run.id) == cancelled_run
 
             with pytest.raises(RecordReferenceError):
                 with record_manager.transaction() as transaction:
                     transaction.jobs.save_job(
+                        access,
                         Job(
                             JobId("JOB", "rolled-back"),
                             tenant.id,
                             workspace.id,
                             "ingest",
                             TimePoint.unknown(),
-                        )
+                        ),
                     )
                     transaction.runs.save_run(
+                        access,
                         Run(
                             RunId("RUN", "orphan"),
                             tenant.id,
                             workspace.id,
                             JobId("JOB", "missing"),
                             TimePoint.unknown(),
-                        )
+                        ),
                     )
 
             with record_manager.transaction() as transaction:
-                assert transaction.jobs.get_job(JobId("JOB", "rolled-back")) is None
+                assert transaction.jobs.get_job(access, JobId("JOB", "rolled-back")) is None
 
             with pytest.raises(RecordReferenceError):
                 with record_manager.transaction() as transaction:
                     transaction.relationships.save_relationship(
+                        access,
                         Relationship(
                             RelationshipId("RELATIONSHIP", "invalid-endpoint"),
                             tenant.id,
@@ -397,7 +429,7 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                             (evidence_id,),
                             TimePoint.unknown(),
                             TimePoint.unknown(),
-                        )
+                        ),
                     )
         finally:
             if engine is not None:

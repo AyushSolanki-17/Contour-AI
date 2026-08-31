@@ -12,17 +12,9 @@ independently versioned frontend can pin, review, and generate a client without
 importing Python internals.
 
 The generated artifact describes implemented behavior, not roadmap intent. The
-current contract exposes liveness and readiness plus trusted-local `PUT` and
-`GET` operations for canonical workspace identifiers and nested logical-source
-identifiers under `/api/v1`. It does not publish listing, ingestion, progress,
-authentication, or authorization behavior.
-
-Request validation uses HTTP 400 and the common error envelope with safe
-field-level details. Missing resources use 404, immutable identity conflicts use
-409, unsupported source configurations use 422, and unavailable required
-storage uses 503. An exact repeated `PUT` returns the same accepted resource.
-Cross-workspace source reads return the same not-found representation as an
-unknown source.
+current contract exposes only liveness and readiness. Tenant, Workspace, and
+Source routes remain unpublished until their authenticated, tenant-scoped
+contract is accepted.
 
 ## Generate and verify
 

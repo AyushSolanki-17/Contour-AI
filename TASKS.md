@@ -1,6 +1,6 @@
 # Contour Active Work
 
-**Status:** one principal-membership card in review; two dependency-gated follow-ups
+**Status:** authenticated collection-contract card in progress by owner direction
 **Updated:** 2026-08-31
 
 This is the bounded execution queue for work promoted from the ordered
@@ -116,7 +116,7 @@ associations even when an application caller supplies valid foreign IDs.
 Owner role: backend
 Assignee: Codex
 Priority: P0
-Status: review
+Status: accepted
 Depends on: `P0-13A` (accepted)
 Product: `PROD-P0-01`
 Contract: transport-neutral application boundary; no new HTTP routes
@@ -196,10 +196,10 @@ above persistence before HTTP routes are published.
 ### P0-13 — Publish the authenticated tenant/workspace/source contract
 
 Owner role: backend
-Assignee: unassigned
+Assignee: Codex
 Priority: P1
-Status: planned
-Depends on: `P0-13B` accepted; owner contract checkpoint
+Status: in_progress
+Depends on: `P0-13B` accepted; explicit owner direction on 2026-08-31
 Product: `PROD-P0-01`
 Contract: frozen planned six-route `/api/v1` collection contract below; current generated artifact remains health-only until implementation
 
@@ -376,6 +376,7 @@ decision unless the owner explicitly directs otherwise.
 | `P0-11` | `done` | Artifact-first exact-byte persistence and immutable source-version admission accepted. |
 | `P0-11A` | `done` | Source-neutral acquisition and persistence contracts accepted with reference-source policy isolated in infrastructure. |
 | `P0-13A` | `done` | Tenant-owned durable persistence with composite foreign-key isolation and populated-database migration accepted. |
+| `P0-13B` | `done` | Provider-neutral principal membership and verified tenant-scoped application services accepted. |
 
 Detailed acceptance evidence is retained in the
 [completed-task log](docs/development/task-history.md) and Git history.

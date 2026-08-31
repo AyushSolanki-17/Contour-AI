@@ -13,9 +13,11 @@ from contour.services.error import ApplicationError
 
 _HTTP_STATUS_BY_ERROR_CODE = {
     "dependency.unavailable": HTTPStatus.SERVICE_UNAVAILABLE,
-    "resource.conflict": HTTPStatus.CONFLICT,
+    "request.idempotency_conflict": HTTPStatus.CONFLICT,
+    "source.already_registered": HTTPStatus.CONFLICT,
     "resource.not_found": HTTPStatus.NOT_FOUND,
-    "source.unsupported": HTTPStatus.UNPROCESSABLE_ENTITY,
+    "source.unsupported_connector": HTTPStatus.UNPROCESSABLE_ENTITY,
+    "auth.unauthenticated": HTTPStatus.UNAUTHORIZED,
 }
 
 
@@ -42,9 +44,11 @@ def register_exception_handlers(app: FastAPI) -> None:
             HTTPStatus.INTERNAL_SERVER_ERROR,
         )
         response = ErrorResponse(error=ErrorBody(code=error.code, message=error.message))
+        headers = {"WWW-Authenticate": "Bearer"} if error.code == "auth.unauthenticated" else None
         return JSONResponse(
             status_code=status_code,
             content=response.model_dump(mode="json", exclude_none=True),
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -68,6 +72,6 @@ def register_exception_handlers(app: FastAPI) -> None:
             )
         )
         return JSONResponse(
-            status_code=HTTPStatus.BAD_REQUEST,
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
             content=response.model_dump(mode="json", exclude_none=True),
         )

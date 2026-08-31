@@ -131,8 +131,10 @@ credential details.
 
 ## Public API status
 
-The published contract currently exposes only liveness and readiness. Tenant,
-Workspace, and Source routes remain unpublished until their authenticated,
-tenant-scoped contract is accepted. The generated
+The published contract exposes liveness/readiness plus authenticated Tenant,
+Workspace, and Source collection routes under `/api/v1`. Configure local demo
+credentials outside source control through `CONTOUR_DEMO_CREDENTIALS` as a JSON
+object mapping opaque bearer tokens to provider-neutral principal IDs (for
+example, `{"local-token":"LOCAL:maintainer"}`). The generated
 [`openapi/contour.openapi.json`](openapi/contour.openapi.json) artifact is the
 authoritative public API surface.

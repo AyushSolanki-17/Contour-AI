@@ -14,6 +14,7 @@ from contour.infrastructure.postgres.access_repository import (
     PostgresPrincipalRepository,
 )
 from contour.infrastructure.postgres.evidence_repository import PostgresEvidenceRepository
+from contour.infrastructure.postgres.idempotency_repository import PostgresIdempotencyRepository
 from contour.infrastructure.postgres.source_repository import PostgresSourceRepository
 from contour.infrastructure.postgres.source_version_repository import (
     PostgresSourceVersionRepository,
@@ -23,6 +24,7 @@ from contour.infrastructure.postgres.workspace_repository import PostgresWorkspa
 from contour.repositories.access import MembershipRepository, PrincipalRepository
 from contour.repositories.catalog_transaction import CatalogUnitOfWork
 from contour.repositories.evidence import EvidenceRepository
+from contour.repositories.idempotency import IdempotencyRepository
 from contour.repositories.source import SourceRepository
 from contour.repositories.source_version import SourceVersionRepository
 from contour.repositories.tenant import TenantRepository
@@ -61,6 +63,7 @@ class PostgresCatalogUnitOfWork:
         self._sources: SourceRepository | None = None
         self._source_versions: SourceVersionRepository | None = None
         self._evidence: EvidenceRepository | None = None
+        self._idempotency: IdempotencyRepository | None = None
 
     @property
     def tenants(self) -> TenantRepository:
@@ -97,6 +100,11 @@ class PostgresCatalogUnitOfWork:
         """Return the evidence repository in the active transaction."""
         return self._require_active(self._evidence, name="evidence repository")
 
+    @property
+    def idempotency(self) -> IdempotencyRepository:
+        """Return scoped idempotency records in the active transaction."""
+        return self._require_active(self._idempotency, name="idempotency repository")
+
     def __enter__(self) -> PostgresCatalogUnitOfWork:
         """Checkout one pooled connection and compose scoped repositories."""
         connection: Connection | None = None
@@ -117,6 +125,7 @@ class PostgresCatalogUnitOfWork:
         self._sources = PostgresSourceRepository(connection)
         self._source_versions = PostgresSourceVersionRepository(connection)
         self._evidence = PostgresEvidenceRepository(connection)
+        self._idempotency = PostgresIdempotencyRepository(connection)
         return self
 
     def __exit__(
@@ -161,6 +170,7 @@ class PostgresCatalogUnitOfWork:
         self._sources = None
         self._source_versions = None
         self._evidence = None
+        self._idempotency = None
 
     @staticmethod
     def _require_active[T](resource: T | None, *, name: str) -> T:

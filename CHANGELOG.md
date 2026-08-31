@@ -19,6 +19,9 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Authenticated, tenant-scoped Tenant, Workspace, and Source collection routes
+  with opaque configured local credentials, non-enumerating nested access,
+  durable idempotency replay, and signed scope-bound pagination cursors.
 - Provider-neutral Principal and uniform Membership persistence with verified,
   correlation-safe Access Contexts for tenant-scoped catalog, knowledge,
   execution, and immutable-source operations. Foreign and unknown Tenant

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from urllib.parse import quote
@@ -55,6 +56,7 @@ class Settings:
     """All runtime settings required by the Phase 0 application boundary."""
 
     database: DatabaseSettings
+    demo_credentials: dict[str, str] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_environment(cls, environment: dict[str, str] | None = None) -> Settings:
@@ -87,6 +89,30 @@ class Settings:
         if not host or any(character.isspace() for character in host):
             raise ConfigurationError("CONTOUR_POSTGRES_HOST must be a non-empty host name.")
 
+        raw_credentials = values.get("CONTOUR_DEMO_CREDENTIALS", "{}")
+        try:
+            encoded_credentials = json.loads(raw_credentials)
+        except json.JSONDecodeError as error:
+            raise ConfigurationError("CONTOUR_DEMO_CREDENTIALS must be a JSON object.") from error
+        if not isinstance(encoded_credentials, dict) or not all(
+            isinstance(token, str) and isinstance(principal_id, str)
+            for token, principal_id in encoded_credentials.items()
+        ):
+            raise ConfigurationError(
+                "CONTOUR_DEMO_CREDENTIALS must map opaque tokens to principal IDs."
+            )
+        credentials: dict[str, str] = {}
+        try:
+            for token, serialized_id in encoded_credentials.items():
+                namespace, value = serialized_id.rsplit(":", 1)
+                if not namespace or not value:
+                    raise ValueError("empty principal identifier part")
+                credentials[token] = serialized_id
+        except (TypeError, ValueError) as error:
+            raise ConfigurationError(
+                "CONTOUR_DEMO_CREDENTIALS contains an invalid principal ID."
+            ) from error
+
         return cls(
             database=DatabaseSettings(
                 database=values["CONTOUR_POSTGRES_DB"],
@@ -94,5 +120,6 @@ class Settings:
                 password=values["CONTOUR_POSTGRES_PASSWORD"],
                 host=host,
                 port=port,
-            )
+            ),
+            demo_credentials=credentials,
         )

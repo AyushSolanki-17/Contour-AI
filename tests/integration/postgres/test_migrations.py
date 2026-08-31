@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260831_07"
+_REVISION = "20260831_08"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -157,6 +157,7 @@ def test_populated_database_migrates_repeatably_to_tenant_ownership(
                         ("entities",),
                         ("entity_evidence",),
                         ("evidence",),
+                        ("idempotency_records",),
                         ("jobs",),
                         ("memberships",),
                         ("principals",),

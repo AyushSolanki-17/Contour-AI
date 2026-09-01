@@ -12,10 +12,12 @@ from contour.domain.source import Source, SourceId
 from contour.domain.tenant import Tenant, TenantId
 from contour.domain.workspace import Workspace, WorkspaceId
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
-from contour.services.catalog_collections import CatalogCollectionService
 from contour.services.catalog_errors import UnsupportedConnectorError
 from contour.services.health_service import HealthService
 from contour.services.resource_errors import ResourceNotFoundError
+from contour.services.source_collections import SourceCollectionService
+from contour.services.tenant_collections import TenantCollectionService
+from contour.services.workspace_collections import WorkspaceCollectionService
 
 _PRINCIPAL = Principal(PrincipalId("TEST", "catalog-client"))
 _AUTHORIZATION = {"Authorization": "Bearer catalog-token"}
@@ -124,7 +126,9 @@ def _client(service: _Catalog | None = None) -> tuple[TestClient, _Catalog]:
     catalog = service or _Catalog()
     app = create_app(
         health_service=HealthService(_Ready()),
-        catalog_service=cast(CatalogCollectionService, catalog),
+        tenant_service=cast(TenantCollectionService, catalog),
+        workspace_service=cast(WorkspaceCollectionService, catalog),
+        source_service=cast(SourceCollectionService, catalog),
         credential_verifier=StaticCredentialVerifier({"catalog-token": _PRINCIPAL}),
         cursor_secret="catalog-contract-secret",
     )

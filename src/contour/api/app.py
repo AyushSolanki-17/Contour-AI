@@ -15,8 +15,10 @@ from contour.api.cursor import CursorCodec
 from contour.api.error_handler import register_exception_handlers
 from contour.api.routes.catalog import create_catalog_router
 from contour.api.routes.health import create_health_router
-from contour.services.catalog_collections import CatalogCollectionService
 from contour.services.health_service import HealthService
+from contour.services.source_collections import SourceCollectionService
+from contour.services.tenant_collections import TenantCollectionService
+from contour.services.workspace_collections import WorkspaceCollectionService
 
 type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
@@ -24,7 +26,9 @@ type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 def create_app(
     *,
     health_service: HealthService,
-    catalog_service: CatalogCollectionService | None = None,
+    tenant_service: TenantCollectionService | None = None,
+    workspace_service: WorkspaceCollectionService | None = None,
+    source_service: SourceCollectionService | None = None,
     credential_verifier: CredentialVerifier | None = None,
     cursor_secret: str = "contract-only-cursor-secret",
     lifespan: AppLifespan | None = None,
@@ -33,7 +37,9 @@ def create_app(
 
     Args:
         health_service: Framework-independent health use cases to expose.
-        catalog_service: Optional authenticated catalog collection use cases.
+        tenant_service: Optional authenticated tenant collection use cases.
+        workspace_service: Optional verified-tenant workspace collection use cases.
+        source_service: Optional verified-workspace source collection use cases.
         credential_verifier: Optional bearer-credential adapter for product routes.
         cursor_secret: Server-side secret used to bind collection cursor tokens.
         lifespan: Optional process-resource lifecycle owned by composition.
@@ -44,9 +50,20 @@ def create_app(
     app = FastAPI(title="Contour", version=__version__, lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(create_health_router(health_service))
-    if catalog_service is not None and credential_verifier is not None:
+    if (
+        tenant_service is not None
+        and workspace_service is not None
+        and source_service is not None
+        and credential_verifier is not None
+    ):
         app.include_router(
-            create_catalog_router(catalog_service, credential_verifier, CursorCodec(cursor_secret))
+            create_catalog_router(
+                tenant_service,
+                workspace_service,
+                source_service,
+                credential_verifier,
+                CursorCodec(cursor_secret),
+            )
         )
     app.openapi = _openapi_without_framework_validation_errors(app)  # type: ignore[method-assign]
     return app

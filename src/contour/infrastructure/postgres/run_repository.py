@@ -13,7 +13,7 @@ from contour.domain.run import Run, RunId, RunStatus
 from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import WorkspaceId
-from contour.infrastructure.postgres.tables.knowledge import runs
+from contour.infrastructure.postgres.tables.execution import runs
 
 
 class PostgresRunRepository:

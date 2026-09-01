@@ -11,13 +11,12 @@ from contour.infrastructure.postgres.tables.catalog import (
     sources,
     workspaces,
 )
+from contour.infrastructure.postgres.tables.execution import jobs, runs
 from contour.infrastructure.postgres.tables.knowledge import (
     entities,
     entity_evidence,
-    jobs,
     relationship_evidence,
     relationships,
-    runs,
 )
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "contour"

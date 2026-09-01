@@ -125,6 +125,8 @@ src/contour/
       tables/
         metadata.py               shared SQLAlchemy metadata registry
         catalog.py                catalog/evidence table definitions
+        knowledge.py              entity/relationship table definitions
+        execution.py              job/run table definitions
         registry.py               assembled head-schema metadata
       catalog_transaction.py      atomic PostgreSQL unit of work
       workspace_repository.py     workspace queries and row mapping

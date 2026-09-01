@@ -12,7 +12,7 @@ from contour.domain.job import Job, JobId, JobStatus
 from contour.domain.tenant import TenantId
 from contour.domain.time_point import TimePoint
 from contour.domain.workspace import WorkspaceId
-from contour.infrastructure.postgres.tables.knowledge import jobs
+from contour.infrastructure.postgres.tables.execution import jobs
 
 
 class PostgresJobRepository:

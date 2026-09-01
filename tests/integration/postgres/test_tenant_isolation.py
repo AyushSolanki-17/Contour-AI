@@ -45,7 +45,8 @@ from contour.infrastructure.postgres.tables.catalog import (
     tenants,
     workspaces,
 )
-from contour.infrastructure.postgres.tables.knowledge import entity_evidence, relationships, runs
+from contour.infrastructure.postgres.tables.execution import runs
+from contour.infrastructure.postgres.tables.knowledge import entity_evidence, relationships
 from contour.services.catalog_service import CatalogAdmissionService
 from contour.settings import DatabaseSettings, Settings
 

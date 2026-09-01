@@ -12,8 +12,11 @@ date without rewriting what was actually delivered.
 
 ### Fixed
 
-- Removed unpublished trusted-local workspace and source routes so the public
-  contract remains health-only until authenticated tenant scoping is available.
+- Concurrent identical catalog requests now replay the committed idempotent
+  result, and PostgreSQL prevents duplicate Workspace/Connector/locator Source
+  registrations that could previously pass simultaneous application pre-checks.
+- Removed the earlier trusted-local workspace and source routes until the
+  authenticated tenant-scoped collection contract replaced them.
 - PostgreSQL now rejects exact-evidence spans that specify only one offset,
   matching the domain's both-or-neither locator invariant.
 

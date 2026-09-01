@@ -1,4 +1,4 @@
-"""Authenticated HTTP controllers for the first product collection contract."""
+"""Authenticated HTTP controllers for tenant-scoped catalog collections."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 
+from contour.api.authentication import CredentialVerifier, UnauthenticatedError
 from contour.api.cursor import CursorCodec, CursorScope
-from contour.api.schemas.error import ErrorResponse
-from contour.api.schemas.product import (
+from contour.api.schemas.catalog import (
     SourceCreateRequest,
     SourcePage,
     SourceResponse,
@@ -19,22 +19,23 @@ from contour.api.schemas.product import (
     WorkspacePage,
     WorkspaceResponse,
 )
+from contour.api.schemas.error import ErrorResponse
 from contour.domain.access import Principal
+from contour.domain.source import Source
 from contour.domain.tenant import TenantId
-from contour.domain.workspace import WorkspaceId
-from contour.services.authentication import CredentialVerifier
-from contour.services.product_errors import UnauthenticatedError
-from contour.services.product_service import ProductCatalogService
+from contour.domain.workspace import Workspace, WorkspaceId
+from contour.services.catalog_collections import CatalogCollectionService
+from contour.services.resource_errors import ResourceNotFoundError
 
 
-def create_product_router(
-    service: ProductCatalogService, verifier: CredentialVerifier, cursors: CursorCodec
+def create_catalog_router(
+    service: CatalogCollectionService, verifier: CredentialVerifier, cursors: CursorCodec
 ) -> APIRouter:
-    """Bind authenticated product collection services to their frozen HTTP routes."""
+    """Bind authenticated catalog services to their frozen HTTP routes."""
     router = APIRouter(prefix="/api/v1", tags=["product"])
 
     def principal(authorization: str | None = Header(default=None)) -> Principal:
-        """Verify one bearer credential before any product use case executes."""
+        """Verify one bearer credential before any catalog use case executes."""
         if authorization is None or not authorization.startswith("Bearer "):
             raise UnauthenticatedError()
         verified = verifier.verify(authorization.removeprefix("Bearer "))
@@ -49,7 +50,6 @@ def create_product_router(
         responses={401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
     )
     def create_tenant(
-        request: Request,
         body: TenantCreateRequest,
         response: Response,
         idempotency_key: str = Header(
@@ -58,9 +58,7 @@ def create_product_router(
         authenticated: Principal = Depends(principal),
     ) -> TenantResponse:
         """Create a tenant and membership for the authenticated principal."""
-        tenant, replayed = service.create_tenant(
-            authenticated, body.name, _correlation_id(request), idempotency_key
-        )
+        tenant, replayed = service.create_tenant(authenticated, body.name, idempotency_key)
         if replayed:
             response.status_code = 200
         return TenantResponse(id=str(tenant.id), name=tenant.name)
@@ -104,9 +102,7 @@ def create_product_router(
     ) -> WorkspaceResponse:
         """Create or safely replay one workspace in an accessible tenant."""
         access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
-        workspace, replayed = service.create_workspace(
-            access, body.name, idempotency_key, {"name": body.name}
-        )
+        workspace, replayed = service.create_workspace(access, body.name, idempotency_key)
         if replayed:
             response.status_code = 200
         return WorkspaceResponse(
@@ -158,7 +154,14 @@ def create_product_router(
         """Register or safely replay one source in an accessible workspace."""
         access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
         source, replayed = service.create_source(
-            access, _workspace_id(workspace_id), body.model_dump(), idempotency_key
+            access=access,
+            workspace_id=_workspace_id(workspace_id),
+            connector_kind=body.connector_kind,
+            canonical_locator=body.canonical_locator,
+            scope=body.scope,
+            license_name=body.license,
+            data_classification=body.data_classification,
+            idempotency_key=idempotency_key,
         )
         if replayed:
             response.status_code = 200
@@ -197,8 +200,6 @@ def _tenant_id(value: str) -> TenantId:
         namespace, local_value = value.rsplit(":", 1)
         return TenantId(namespace, local_value)
     except ValueError as error:
-        from contour.services.access_errors import ResourceNotFoundError
-
         raise ResourceNotFoundError() from error
 
 
@@ -208,8 +209,6 @@ def _workspace_id(value: str) -> WorkspaceId:
         namespace, local_value = value.rsplit(":", 1)
         return WorkspaceId(namespace, local_value)
     except ValueError as error:
-        from contour.services.access_errors import ResourceNotFoundError
-
         raise ResourceNotFoundError() from error
 
 
@@ -218,32 +217,24 @@ def _correlation_id(request: Request) -> str:
     return request.headers.get("X-Correlation-ID") or str(uuid4())
 
 
-def _workspace_response(workspace: object) -> WorkspaceResponse:
+def _workspace_response(workspace: Workspace) -> WorkspaceResponse:
     """Serialize a workspace domain value at the delivery boundary."""
-    from contour.domain.workspace import Workspace
-
-    value = workspace if isinstance(workspace, Workspace) else None
-    if value is None:
-        raise TypeError("workspace must be a Workspace")
-    return WorkspaceResponse(id=str(value.id), tenant_id=str(value.tenant_id), name=value.name)
+    return WorkspaceResponse(
+        id=str(workspace.id), tenant_id=str(workspace.tenant_id), name=workspace.name
+    )
 
 
-def _source_response(source: object) -> SourceResponse:
+def _source_response(source: Source) -> SourceResponse:
     """Serialize a source domain value at the delivery boundary."""
-    from contour.domain.source import Source
-
-    value = source if isinstance(source, Source) else None
-    if value is None:
-        raise TypeError("source must be a Source")
     return SourceResponse(
-        id=str(value.id),
-        tenant_id=str(value.tenant_id),
-        workspace_id=str(value.workspace_id),
-        connector_kind=value.source_type,
-        canonical_locator=value.canonical_locator,
-        scope=value.scope,
-        license=value.license,
-        data_classification=value.data_classification,
+        id=str(source.id),
+        tenant_id=str(source.tenant_id),
+        workspace_id=str(source.workspace_id),
+        connector_kind=source.source_type,
+        canonical_locator=source.canonical_locator,
+        scope=source.scope,
+        license=source.license,
+        data_classification=source.data_classification,
     )
 
 
@@ -258,8 +249,6 @@ def _page[T](
         try:
             start = identities.index(after) + 1
         except ValueError as error:
-            from contour.services.access_errors import ResourceNotFoundError
-
             raise ResourceNotFoundError() from error
     page = items[start : start + limit]
     next_cursor = (

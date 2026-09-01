@@ -9,7 +9,7 @@ from contour.domain.source_version import SourceVersion
 from contour.domain.tenant import Tenant
 from contour.domain.workspace import Workspace
 from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.access_errors import ResourceNotFoundError
+from contour.services.resource_errors import ResourceNotFoundError
 
 
 class CatalogAdmissionService:

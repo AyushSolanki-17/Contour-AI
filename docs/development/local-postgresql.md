@@ -68,9 +68,12 @@ recorded in the database. The current Phase 0 schema creates `tenants`,
 tenant-owned `workspaces` and `sources`, immutable `source_versions`, exact
 `evidence`, evidence-backed entities and relationships, and durable jobs with
 distinct run attempts. Composite foreign keys prevent evidence, relationship,
-and run links from crossing the persisted Tenant/Workspace ownership tuple. It
-does not yet implement membership enforcement, acquisition, extraction, or
-indexing.
+and run links from crossing the persisted Tenant/Workspace ownership tuple.
+Principals, Memberships, and durable operation-replay records support the
+authenticated catalog contract. A unique Source registration constraint on
+Workspace, Connector kind, and canonical locator closes the application
+pre-check under concurrency. The schema does not yet implement acquisition,
+extraction, or indexing.
 
 `make migration-check` compares the SQLAlchemy Core metadata registry with the
 connected database and fails when a schema change has no matching migration.
@@ -109,6 +112,12 @@ recovery. For a disposable local development database only, use the explicit
 reset below, then run `make db-up`, `make db-ready`, and `make migrate` to
 restore a clean state. Production migration orchestration and automatic
 downgrade are not implemented.
+
+The Source-registration uniqueness revision never guesses which duplicate is
+authoritative. If an older database contains duplicate Workspace/Connector/
+locator registrations, the transactional revision fails without deleting data.
+Resolve those records explicitly, retain the desired immutable lineage, and
+retry `make migrate`; do not bypass or drop the constraint.
 
 The tenant-ownership revision assigns every row from the prior schema to the
 single explicit `LEGACY:default` tenant inside its transaction. This preserves

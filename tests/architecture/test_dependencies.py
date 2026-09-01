@@ -143,6 +143,20 @@ def test_infrastructure_initializers_do_not_hide_implementation_imports() -> Non
     assert violations == []
 
 
+def test_only_infrastructure_and_bootstrap_import_concrete_adapters() -> None:
+    """Core and delivery code cannot bypass ports or executable composition."""
+    violations: list[str] = []
+    for path in sorted(_PACKAGE_ROOT.rglob("*.py")):
+        relative = path.relative_to(_PACKAGE_ROOT)
+        if relative.parts[0] in {"bootstrap", "infrastructure"}:
+            continue
+        for imported_name in _imported_names(path):
+            if imported_name.startswith("contour.infrastructure"):
+                violations.append(f"{relative} imports {imported_name}")
+
+    assert violations == []
+
+
 def test_application_services_remain_source_neutral() -> None:
     """PEP policy stays in source infrastructure, not reusable core policy."""
     violations: list[str] = []
@@ -209,6 +223,11 @@ def test_durable_records_declare_nonoptional_tenant_workspace_ownership() -> Non
     for table in workspace_owned_tables:
         assert not table.c.workspace_namespace.nullable
         assert not table.c.workspace_value.nullable
+
+
+def test_source_registration_uniqueness_is_a_database_invariant() -> None:
+    """Concurrent source registration cannot bypass an application pre-check."""
+    assert "uq_sources_registration" in {constraint.name for constraint in sources.constraints}
 
 
 def _imported_names(path: Path) -> tuple[str, ...]:

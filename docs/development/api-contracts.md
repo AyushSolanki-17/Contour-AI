@@ -1,7 +1,7 @@
 # API Contract Synchronization
 
 **Status:** required backend/frontend integration procedure
-**Updated:** 2026-08-19
+**Updated:** 2026-09-01
 
 ## Ownership
 
@@ -12,9 +12,10 @@ independently versioned frontend can pin, review, and generate a client without
 importing Python internals.
 
 The generated artifact describes implemented behavior, not roadmap intent. The
-current contract exposes only liveness and readiness. Tenant, Workspace, and
-Source routes remain unpublished until their authenticated, tenant-scoped
-contract is accepted.
+current contract exposes liveness and readiness plus authenticated Tenant,
+Workspace, and Source collections under `/api/v1`. The collection contract uses
+non-enumerating tenant access, durable idempotency, and signed scope-bound
+pagination cursors.
 
 ## Generate and verify
 

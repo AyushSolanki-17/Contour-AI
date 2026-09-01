@@ -123,6 +123,13 @@ sources = sa.Table(
         "tenant_value",
         name="uq_sources_ownership",
     ),
+    sa.UniqueConstraint(
+        "workspace_namespace",
+        "workspace_value",
+        "source_type",
+        "canonical_locator",
+        name="uq_sources_registration",
+    ),
     sa.ForeignKeyConstraint(
         ["workspace_namespace", "workspace_value"],
         ["workspaces.namespace", "workspaces.value"],

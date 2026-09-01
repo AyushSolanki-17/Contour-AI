@@ -5,7 +5,7 @@ from __future__ import annotations
 from contour.domain.access import AccessContext, Membership, Principal
 from contour.domain.tenant import Tenant, TenantId
 from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.access_errors import ResourceNotFoundError
+from contour.services.resource_errors import ResourceNotFoundError
 
 
 class TenantAccessService:

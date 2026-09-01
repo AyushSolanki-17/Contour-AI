@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 
-from contour.api.authentication import CredentialVerifier, UnauthenticatedError
+from contour.api.authentication import CredentialVerifier, bearer_principal
 from contour.api.cursor import CursorCodec, CursorScope
 from contour.api.schemas.catalog import (
     SourceCreateRequest,
@@ -33,15 +33,7 @@ def create_catalog_router(
 ) -> APIRouter:
     """Bind authenticated catalog services to their frozen HTTP routes."""
     router = APIRouter(prefix="/api/v1", tags=["product"])
-
-    def principal(authorization: str | None = Header(default=None)) -> Principal:
-        """Verify one bearer credential before any catalog use case executes."""
-        if authorization is None or not authorization.startswith("Bearer "):
-            raise UnauthenticatedError()
-        verified = verifier.verify(authorization.removeprefix("Bearer "))
-        if verified is None:
-            raise UnauthenticatedError()
-        return verified
+    principal = bearer_principal(verifier)
 
     @router.post(
         "/tenants",

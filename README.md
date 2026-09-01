@@ -113,8 +113,9 @@ before recovering a failed local migration.
 
 ## Start the backend and check health
 
-The backend requires the PostgreSQL variables in `.env`; no database password,
-name, user, or port is invented at startup. After configuring and starting the
+The backend requires the PostgreSQL variables and a distinct
+`CONTOUR_CURSOR_SIGNING_SECRET` in `.env`; no database password, name, user,
+port, or cursor secret is invented at startup. After configuring and starting the
 local database, start the loopback-only API server. The target loads the
 development-only `.env` variables for this command:
 

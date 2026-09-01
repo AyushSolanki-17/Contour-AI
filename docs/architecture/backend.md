@@ -1,7 +1,7 @@
 # Backend Architecture
 
 **Status:** controlling Phase 0 implementation direction
-**Updated:** 2026-08-20
+**Updated:** 2026-09-01
 
 ## Decision
 
@@ -51,7 +51,7 @@ are stable even while new capabilities are added:
 | `domain` | identifiers, entities, relationships, evidence, versions, jobs/runs, invariants | HTTP, SQL, provider, or UI details |
 | `services` | use cases, commands/queries/results, transaction intent, and safe operational errors organized by capability | framework sessions, SQL, provider payloads, or HTTP semantics |
 | `repositories` | capability-specific persistence ports and unit-of-work contracts consumed by services | SQLAlchemy, driver types, SQL, generic CRUD bases, or transport behavior |
-| `api` | FastAPI schemas, validation, errors, pagination, idempotency, versioning | business rules or direct persistence |
+| `api` | FastAPI schemas, HTTP authentication extraction, validation, error/status translation, signed cursors, and versioning | business rules, durable idempotency policy, or direct persistence |
 | `worker` *(when implemented)* | durable-job delivery, polling, cancellation handling, and service-error translation | extraction policy, SQL, or in-memory job authority |
 | `infrastructure/<technology>` | PostgreSQL, artifact, source, and provider implementations of repository or service ports | durable domain semantics or use-case policy |
 | `observability` | logging, metrics, tracing setup, redaction integration, and telemetry adapters | product decisions or request orchestration |
@@ -95,8 +95,13 @@ src/contour/
   services/
     error.py                      shared service-error base only
     health_service.py             framework-neutral health use cases
+    access_service.py             membership-backed Tenant access
+    catalog_collections.py        authenticated Tenant/Workspace/Source use cases
     catalog_service.py            atomic catalog admission use case
-    catalog_errors.py             safe catalog failure contracts
+    catalog_errors.py             safe catalog and operation-replay failures
+    knowledge_persistence.py      atomic Entity/Relationship admission
+    execution_persistence.py      atomic Job/Run recording
+    resource_errors.py            non-enumerating inaccessible-resource outcome
     source_persistence.py         artifact-first immutable source admission
   repositories/
     artifact.py                    exact content-addressed artifact port
@@ -105,9 +110,13 @@ src/contour/
     source_version.py             immutable-version persistence port
     evidence.py                   exact-evidence persistence port
     catalog_transaction.py        atomic catalog unit-of-work contract
+    knowledge_transaction.py      narrow Entity/Relationship transaction view
+    execution_transaction.py      narrow Job/Run transaction view
   infrastructure/
     artifact/
       filesystem.py               atomic SHA-256 filesystem artifacts
+    authentication/
+      static_credentials.py       configured local/demo credential adapter
     source/
       pep.py                      reference PEP preflight and acquisition
     postgres/
@@ -123,8 +132,10 @@ src/contour/
       source_version_repository.py version queries and row mapping
       evidence_repository.py      evidence queries and row mapping
   api/
-    routes/                       thin HTTP controllers by resource/capability
-    schemas/                      Pydantic-only public wire contracts
+    authentication.py             HTTP-owned credential verification port
+    cursor.py                     signed scope-bound HTTP pagination tokens
+    routes/catalog.py             thin authenticated catalog controllers
+    schemas/catalog.py            Pydantic-only catalog wire contracts
     error_handler.py              service-error to HTTP translation
     app.py                        HTTP delivery assembly
   bootstrap/
@@ -145,6 +156,24 @@ and transaction behavior is currently PostgreSQL-specific and already has one
 clear owner under `infrastructure/postgres/`. If a technology-neutral database
 responsibility emerges, it can be extracted with evidence rather than duplicated
 in anticipation.
+
+### Architecture stability and change admission
+
+This package topology is an accepted baseline. New work follows the
+[feature startup and architecture stability protocol](../development/feature-startup.md)
+and places behavior in these owners before considering another layout. A
+repository-wide layer-first versus feature-first reshuffle is not ordinary
+feature work.
+
+A boundary moves only for a demonstrated forbidden dependency, mixed ownership,
+duplicate implementation path, real second adapter or implementation that the
+contract cannot support, measured operational failure, or accepted change to
+deployment or consistency. Line count alone, file count, preference, fashion,
+and hypothetical scale do not admit an architecture change. An admitted change
+updates implementation, callers, tests, composition, generated contracts, and
+documentation together; removes the replaced path; and adds the smallest
+executable architecture check that prevents recurrence. The result must leave
+one vocabulary and one obvious implementation path.
 
 ### Dependency direction
 
@@ -338,10 +367,13 @@ removal path before adding that dependency. Singleton support alone is not a
 reason to add a container.
 
 The HTTP composition root currently creates one SQLAlchemy engine and connection
-pool for the process, injects it into PostgreSQL infrastructure, and disposes it through
-FastAPI lifespan handling. This is ordinary constructor injection; a third-party
-DI container is intentionally deferred because the graph has no conditional or
-plugin-driven bindings that justify another runtime dependency.
+pool, PostgreSQL transaction manager, configured static credential adapter, and
+application services for the process. It injects the HTTP-owned credential port
+and services into FastAPI and disposes the engine through lifespan handling.
+Concrete authentication and PostgreSQL adapters are imported only by
+infrastructure and bootstrap; an executable architecture test enforces that
+core and delivery code cannot bypass those boundaries. This is ordinary
+constructor injection, so a third-party DI container remains unjustified.
 
 ## Data ownership
 
@@ -357,7 +389,7 @@ record. Composite foreign keys bind sources, immutable versions, evidence,
 evidence attachments, relationship endpoints, jobs, and runs to that same
 tuple, so cross-owner associations fail atomically even for otherwise valid
 identifiers. Principals and Memberships are durable PostgreSQL records.
-Product services derive a verified Access Context from Membership, then carry
+Catalog services derive a verified Access Context from Membership, then carry
 its Tenant scope through Workspace, catalog, knowledge, execution, and
 artifact-facing operations. A selector is never accepted as access proof.
 
@@ -370,6 +402,14 @@ failed database operation may leave a valid content-addressed orphan, which the
 same request can reuse safely on retry. Missing and checksum-invalid filesystem
 artifacts remain explicit; resubmitting the already validated bytes repairs
 them atomically before the immutable manifest is returned.
+
+Workspace-local Source registration is uniquely identified by Workspace,
+Connector kind, and canonical locator. PostgreSQL enforces that invariant so a
+concurrent request cannot bypass the application pre-check. Durable operation
+replay records are scoped by Principal, ownership scope, operation, and key and
+commit in the same catalog transaction as their mutation. A concurrent loser
+reads and validates the committed winner; a different payload receives the
+stable idempotency-conflict outcome.
 
 The [knowledge model](knowledge-model.md) controls meaning independently of physical tables.
 
@@ -394,6 +434,9 @@ HTTP handlers, workers, CLI commands, and tests call the same services. API cont
   programmer misuse or invalid domain values before persistence.
 - Each service capability owns safe, transport-neutral operational errors
   derived from the shared `ApplicationError` contract.
+- HTTP authentication failure belongs to `api/authentication.py` because bearer
+  extraction and credential representation are delivery concerns; verified
+  `Principal` and `AccessContext` values are transport-neutral domain values.
 - Infrastructure translates driver/provider exceptions at its boundary; service
   and delivery code never branch on SQLAlchemy, psycopg, or provider exceptions.
 - Delivery adapters map safe service errors to protocol status and envelopes
@@ -410,6 +453,22 @@ or sessions, permission denial, guessed foreign IDs, and tenant-scope mismatch
 in cursors, idempotency, relationships, evidence, jobs, runs, and artifacts.
 
 Accepted work survives a failed stage. Retries are idempotent or create an explicit new attempt. Errors and traces redact secrets and never turn a failure into an unexplained empty result.
+
+## Transaction ownership
+
+Application services decide when work must be atomic; PostgreSQL infrastructure
+owns connection checkout, commit, rollback, isolation behavior, cleanup, and
+driver-error translation. `CatalogTransactionManager` creates a fresh
+request/command-scoped unit of work for Tenant, Principal, Membership,
+Workspace, Source, immutable Version, Evidence, and operation-replay changes.
+Those repositories share one connection only when a catalog workflow requires
+one commit. Knowledge and execution services depend on separate narrow
+transaction contracts, so neither use case can reach repositories owned by the
+other. PostgreSQL currently satisfies both views with one record-transaction
+implementation to share connection, rollback, cleanup, and error translation
+mechanics without exposing the broader implementation to application code.
+Neither domain objects nor HTTP routes open transactions, and repository methods
+never commit independently.
 
 ## Acceptance gate
 

@@ -16,6 +16,11 @@ implementation terms used across those documents and includes concrete examples.
 For HTTP-facing changes, also read
 [API contract synchronization](development/api-contracts.md).
 
+Before non-trivial implementation, use the
+[feature startup and architecture stability protocol](development/feature-startup.md)
+to place the change, decide whether an architectural boundary actually needs to
+move, and define the bounded verification plan.
+
 Repository-wide instructions for coding agents live in [AGENTS.md](../AGENTS.md).
 
 ## Executing the roadmap

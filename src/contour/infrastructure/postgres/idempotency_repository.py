@@ -1,4 +1,4 @@
-"""PostgreSQL persistence for scoped HTTP idempotency results."""
+"""PostgreSQL persistence for scoped application operation results."""
 
 from __future__ import annotations
 
@@ -17,16 +17,16 @@ class PostgresIdempotencyRepository:
         """Bind the repository to its caller-owned transaction connection."""
         self._connection = connection
 
-    def get_response(
-        self, principal: Principal, scope: str, route: str, key: str
+    def get_result(
+        self, principal: Principal, scope: str, operation: str, key: str
     ) -> tuple[str, dict[str, str | None]] | None:
-        """Return the accepted payload digest and public response for an exact key."""
+        """Return the accepted input digest and operation result for an exact key."""
         row = self._connection.execute(
             select(idempotency_records.c.payload_digest, idempotency_records.c.response).where(
                 idempotency_records.c.principal_namespace == principal.id.namespace,
                 idempotency_records.c.principal_value == principal.id.value,
                 idempotency_records.c.scope == scope,
-                idempotency_records.c.route == route,
+                idempotency_records.c.route == operation,
                 idempotency_records.c.key == key,
             )
         ).one_or_none()
@@ -34,14 +34,14 @@ class PostgresIdempotencyRepository:
             return None
         return cast(str, row.payload_digest), cast(dict[str, str | None], row.response)
 
-    def save_response(
+    def save_result(
         self,
         principal: Principal,
         scope: str,
-        route: str,
+        operation: str,
         key: str,
         payload_digest: str,
-        response: dict[str, str | None],
+        result: dict[str, str | None],
     ) -> None:
         """Insert one result before the containing transaction commits."""
         self._connection.execute(
@@ -49,9 +49,9 @@ class PostgresIdempotencyRepository:
                 principal_namespace=principal.id.namespace,
                 principal_value=principal.id.value,
                 scope=scope,
-                route=route,
+                route=operation,
                 key=key,
                 payload_digest=payload_digest,
-                response=response,
+                response=result,
             )
         )

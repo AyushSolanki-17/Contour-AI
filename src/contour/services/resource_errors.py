@@ -1,4 +1,4 @@
-"""Safe application outcomes for tenant-scoped access enforcement."""
+"""Safe application errors for inaccessible or unknown resources."""
 
 from __future__ import annotations
 

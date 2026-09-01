@@ -1,7 +1,7 @@
 # Contour Active Work
 
-**Status:** authenticated collection-contract card in progress by owner direction
-**Updated:** 2026-08-31
+**Status:** authenticated collection contract awaiting acceptance
+**Updated:** 2026-09-01
 
 This is the bounded execution queue for work promoted from the ordered
 [backend roadmap](docs/development/roadmap.md). Claim exactly one `ready` card
@@ -198,10 +198,10 @@ above persistence before HTTP routes are published.
 Owner role: backend
 Assignee: Codex
 Priority: P1
-Status: in_progress
+Status: review
 Depends on: `P0-13B` accepted; explicit owner direction on 2026-08-31
 Product: `PROD-P0-01`
-Contract: frozen planned six-route `/api/v1` collection contract below; current generated artifact remains health-only until implementation
+Contract: implemented six-route `/api/v1` collection contract below; generated artifact includes the authenticated collections
 
 #### Goal
 
@@ -353,11 +353,10 @@ next proposed card, why it is next, and what remains deferred. A planned card
 stays unassigned; there are no dependency-gated reserve assignments.
 
 The owner replaced the earlier single-user assumption with a multi-tenant MVP
-requirement on 2026-08-30. `P0-13A` is accepted, and the owner explicitly
-authorized `P0-13B` as the one active card. `P0-13` and `P0-12` remain planned
-and unassigned in that order. An implementer moves the active card to `review`
-with evidence, and acceptance and queue refill remain a reviewer/coordinator
-decision unless the owner explicitly directs otherwise.
+requirement on 2026-08-30. `P0-13A` and `P0-13B` are accepted. The implemented
+`P0-13` contract is in review; `P0-12` remains planned and unassigned. Acceptance
+and queue refill remain a reviewer/coordinator decision unless the owner
+explicitly directs otherwise.
 
 ## Recently completed
 

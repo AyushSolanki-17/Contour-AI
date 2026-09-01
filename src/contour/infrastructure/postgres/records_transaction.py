@@ -15,7 +15,6 @@ from contour.infrastructure.postgres.relationship_repository import PostgresRela
 from contour.infrastructure.postgres.run_repository import PostgresRunRepository
 from contour.repositories.entity import EntityRepository
 from contour.repositories.job import JobRepository
-from contour.repositories.records_transaction import RecordUnitOfWork
 from contour.repositories.relationship import RelationshipRepository
 from contour.repositories.run import RunRepository
 from contour.services.record_errors import (
@@ -32,7 +31,7 @@ class PostgresRecordTransactionManager:
         """Initialize the factory with an engine owned by the composition root."""
         self._engine = engine
 
-    def transaction(self) -> RecordUnitOfWork:
+    def transaction(self) -> PostgresRecordUnitOfWork:
         """Create one unopened transaction scope for a record operation."""
         return PostgresRecordUnitOfWork(self._engine)
 

@@ -11,8 +11,8 @@ from contour.domain.source_version import SourceVersion, SourceVersionId
 from contour.domain.time_point import TimePoint
 from contour.repositories.artifact import ArtifactRepository, ArtifactWriteState
 from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.access_errors import ResourceNotFoundError
 from contour.services.catalog_errors import CatalogConflictError
+from contour.services.resource_errors import ResourceNotFoundError
 
 
 @dataclass(frozen=True, slots=True)

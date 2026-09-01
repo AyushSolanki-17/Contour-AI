@@ -1,4 +1,4 @@
-"""Durable idempotency records scoped to verified product access."""
+"""Durable operation-replay records scoped to verified application access."""
 
 from __future__ import annotations
 
@@ -8,20 +8,20 @@ from contour.domain.access import Principal
 
 
 class IdempotencyRepository(Protocol):
-    """Stores replay-safe HTTP operation results in one transaction."""
+    """Stores replay-safe application operation results in one transaction."""
 
-    def get_response(
-        self, principal: Principal, scope: str, route: str, key: str
+    def get_result(
+        self, principal: Principal, scope: str, operation: str, key: str
     ) -> tuple[str, dict[str, str | None]] | None:
-        """Return the request digest and original public response for one scoped key."""
+        """Return the input digest and accepted result for one scoped key."""
 
-    def save_response(
+    def save_result(
         self,
         principal: Principal,
         scope: str,
-        route: str,
+        operation: str,
         key: str,
         payload_digest: str,
-        response: dict[str, str | None],
+        result: dict[str, str | None],
     ) -> None:
-        """Persist one accepted replay result atomically with its mutation."""
+        """Persist one accepted operation result atomically with its mutation."""

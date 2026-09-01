@@ -13,7 +13,7 @@ from psycopg import sql
 
 from contour.settings import DatabaseSettings, Settings
 
-_REVISION = "20260831_08"
+_REVISION = "20260901_09"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -175,6 +175,11 @@ def test_populated_database_migrates_repeatably_to_tenant_ownership(
                     assert cursor.fetchone() == (None, True)
                     cursor.execute("SELECT namespace, value FROM tenants ORDER BY namespace, value")
                     assert cursor.fetchall() == [("LEGACY", "default")]
+                    cursor.execute(
+                        "SELECT conname FROM pg_constraint "
+                        "WHERE conrelid = 'sources'::regclass AND contype = 'u'"
+                    )
+                    assert "uq_sources_registration" in {row[0] for row in cursor.fetchall()}
                     for table_name in (
                         "workspaces",
                         "sources",

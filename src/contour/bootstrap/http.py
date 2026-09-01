@@ -10,13 +10,13 @@ from sqlalchemy import Engine
 
 from contour.api.app import AppLifespan, create_app
 from contour.domain.access import Principal, PrincipalId
+from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
 from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.readiness import PostgresReadinessProbe
 from contour.observability.logging import configure_logging
-from contour.services.authentication import StaticCredentialVerifier
+from contour.services.catalog_collections import CatalogCollectionService
 from contour.services.health_service import HealthService, ReadinessProbe
-from contour.services.product_service import ProductCatalogService
 from contour.settings import Settings
 
 
@@ -41,7 +41,7 @@ def create_http_app(
     verifier = StaticCredentialVerifier(_configured_principals(settings.demo_credentials))
     return create_app(
         health_service=health_service,
-        product_service=ProductCatalogService(transactions, frozenset({"pep"})),
+        catalog_service=CatalogCollectionService(transactions, frozenset({"pep"})),
         credential_verifier=verifier,
         cursor_secret=settings.database.password,
         lifespan=_database_lifespan(engine),

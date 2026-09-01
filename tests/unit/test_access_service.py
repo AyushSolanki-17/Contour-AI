@@ -6,8 +6,8 @@ import pytest
 
 from contour.domain.access import Membership, Principal, PrincipalId
 from contour.domain.tenant import Tenant, TenantId
-from contour.services.access_errors import ResourceNotFoundError
 from contour.services.access_service import TenantAccessService
+from contour.services.resource_errors import ResourceNotFoundError
 
 
 class _Principals:

@@ -71,6 +71,20 @@ For non-trivial work:
 If documentation and code conflict on a material invariant, surface and resolve
 the conflict explicitly rather than guessing.
 
+### Contour startup and stability protocol
+
+For non-trivial work in this repository, follow the canonical
+[feature startup and architecture stability](../../../docs/development/feature-startup.md)
+protocol before editing production code. Treat the accepted modular-monolith
+boundaries as the default. Do not propose or perform another repository-wide
+package reshuffle without a concrete admission trigger from that protocol.
+
+When a boundary change is justified, finish it as one coherent architecture:
+update callers, tests, composition, generated contracts, and owning docs; remove
+the replaced path; and add the smallest executable fitness check that prevents
+regression. Do not preserve a temporary second vocabulary or keep refactoring
+after the stated contract and invariants are satisfied.
+
 ## Design and implementation
 
 - Preserve established boundaries. Keep domain and application policy separate

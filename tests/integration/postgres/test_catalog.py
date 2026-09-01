@@ -47,8 +47,9 @@ from contour.infrastructure.postgres.records_transaction import PostgresRecordTr
 from contour.infrastructure.postgres.tables.catalog import evidence as evidence_table
 from contour.services.catalog_errors import CatalogConflictError, CatalogReferenceError
 from contour.services.catalog_service import CatalogAdmissionService
+from contour.services.execution_persistence import ExecutionPersistenceService
+from contour.services.knowledge_persistence import KnowledgePersistenceService
 from contour.services.record_errors import RecordReferenceError
-from contour.services.records_service import RecordPersistenceService
 from contour.settings import DatabaseSettings, Settings
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -373,11 +374,12 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                 "cancelled",
             )
             record_manager = PostgresRecordTransactionManager(engine)
-            service = RecordPersistenceService(record_manager)
-            service.admit_knowledge(
+            knowledge_service = KnowledgePersistenceService(record_manager)
+            execution_service = ExecutionPersistenceService(record_manager)
+            knowledge_service.admit_knowledge(
                 access=access, entities=(entity_a, entity_b), relationship=relationship
             )
-            service.record_execution(access=access, job=job, runs=(failed_run, cancelled_run))
+            execution_service.record(access=access, job=job, runs=(failed_run, cancelled_run))
 
             with record_manager.transaction() as transaction:
                 assert transaction.entities.get_entity(access, entity_a.id) == entity_a

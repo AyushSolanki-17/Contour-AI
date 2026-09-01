@@ -40,13 +40,13 @@ from contour.infrastructure.postgres.tables.catalog import source_versions
 from contour.infrastructure.source.pep import PepAcquisitionService, PepPreflightService
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
 from contour.repositories.artifact import ArtifactWriteState
-from contour.services.access_errors import ResourceNotFoundError
 from contour.services.artifact_errors import (
     ArtifactIntegrityError,
     ArtifactNotFoundError,
     ArtifactPersistenceError,
 )
 from contour.services.catalog_errors import CatalogConflictError
+from contour.services.resource_errors import ResourceNotFoundError
 from contour.services.source_persistence import SourcePersistenceService
 from contour.settings import DatabaseSettings, Settings
 

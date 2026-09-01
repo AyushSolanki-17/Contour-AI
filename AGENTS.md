@@ -25,6 +25,23 @@ Use `README.md` for the public summary. The documents above control implementati
 
 Phase 0 is active. Build the smallest complete Python backend path from workspace and supported source through durable ingestion, basic extraction/search, exact evidence, and run inspection. Follow the ordered roadmap unless the task explicitly changes priority.
 
+## Feature startup and architecture stability
+
+Before non-trivial implementation, follow the
+[`feature startup protocol`](docs/development/feature-startup.md). Establish the
+observable contract, capability owner, current call/data path, transaction
+boundary, compatibility impact, and verification plan before editing production
+code.
+
+The accepted modular-monolith boundaries are the default, not a recurring
+design question. Do not initiate another repository-wide folder or layer
+refactor unless the protocol's architecture-change admission gate has concrete
+evidence. File count, line count alone, naming preference, architectural
+fashion, and hypothetical scale are not evidence. When a boundary change is
+admitted, complete callers, tests, wiring, generated contracts, documentation,
+obsolete-code removal, and an executable fitness check in one coherent
+sequence. Leave one vocabulary and no compatibility architecture behind.
+
 ## Execution workflow
 
 For roadmap-driven work without a more specific user request, use
@@ -165,3 +182,16 @@ titles. Use descriptive names that explain the actual change.
   private datasets, generated environments, local artifacts, or other secrets.
 - Run the repository pre-commit checks and the relevant verification suite before
   committing. Do not commit known failing checks without explicit user approval.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

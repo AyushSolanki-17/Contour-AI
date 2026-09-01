@@ -23,6 +23,11 @@ capability-specific persistence interfaces, and `infrastructure/` contains
 PostgreSQL and other external-system implementations. Alembic migrations remain
 separate from runtime schema declarations.
 
+Non-trivial changes begin with the
+[feature startup and architecture stability protocol](docs/development/feature-startup.md).
+It defines where new behavior belongs and the evidence required before changing
+an accepted architectural boundary.
+
 ## Development status
 
 Phase 0 is active. The Python package, local quality tooling, durable

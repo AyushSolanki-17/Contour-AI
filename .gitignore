@@ -4,6 +4,8 @@
 !/.agents/skills/**
 /contour-research
 .DS_Store
+/.idea/
+/graphify-out/
 __pycache__/
 *.py[cod]
 *$py.class

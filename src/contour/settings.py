@@ -56,6 +56,7 @@ class Settings:
     """All runtime settings required by the Phase 0 application boundary."""
 
     database: DatabaseSettings
+    cursor_signing_secret: str = field(repr=False)
     demo_credentials: dict[str, str] = field(default_factory=dict, repr=False)
 
     @classmethod
@@ -89,6 +90,10 @@ class Settings:
         if not host or any(character.isspace() for character in host):
             raise ConfigurationError("CONTOUR_POSTGRES_HOST must be a non-empty host name.")
 
+        cursor_signing_secret = values.get("CONTOUR_CURSOR_SIGNING_SECRET")
+        if not cursor_signing_secret:
+            raise ConfigurationError("CONTOUR_CURSOR_SIGNING_SECRET must be non-empty.")
+
         raw_credentials = values.get("CONTOUR_DEMO_CREDENTIALS", "{}")
         try:
             encoded_credentials = json.loads(raw_credentials)
@@ -121,5 +126,6 @@ class Settings:
                 host=host,
                 port=port,
             ),
+            cursor_signing_secret=cursor_signing_secret,
             demo_credentials=credentials,
         )

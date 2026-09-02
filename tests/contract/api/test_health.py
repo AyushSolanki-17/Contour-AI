@@ -25,6 +25,7 @@ def settings() -> Settings:
             "CONTOUR_POSTGRES_USER": "contour",
             "CONTOUR_POSTGRES_PASSWORD": "not-for-logs",
             "CONTOUR_POSTGRES_PORT": "5432",
+            "CONTOUR_CURSOR_SIGNING_SECRET": "cursor-secret-for-tests",
         }
     )
 

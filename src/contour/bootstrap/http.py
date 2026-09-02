@@ -43,7 +43,7 @@ def create_http_app(
         health_service=health_service,
         catalog_service=CatalogCollectionService(transactions, frozenset({"pep"})),
         credential_verifier=verifier,
-        cursor_secret=settings.database.password,
+        cursor_secret=settings.cursor_signing_secret,
         lifespan=_database_lifespan(engine),
     )
 

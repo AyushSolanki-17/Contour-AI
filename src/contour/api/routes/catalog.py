@@ -20,14 +20,14 @@ from contour.api.schemas.catalog import (
     WorkspaceResponse,
 )
 from contour.api.schemas.error import ErrorResponse
-from contour.domain.access import Principal
-from contour.domain.source import Source
-from contour.domain.tenant import TenantId
-from contour.domain.workspace import Workspace, WorkspaceId
-from contour.services.resource_errors import ResourceNotFoundError
-from contour.services.source_collections import SourceCollectionService
-from contour.services.tenant_collections import TenantCollectionService
-from contour.services.workspace_collections import WorkspaceCollectionService
+from contour.errors import ResourceNotFoundError
+from contour.sources.application.registration import SourceCollectionService
+from contour.sources.domain.source import Source
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.tenancy.domain.access import Principal
+from contour.tenancy.domain.tenant import TenantId
+from contour.workspaces.application.collections import WorkspaceCollectionService
+from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 
 def create_catalog_router(

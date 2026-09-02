@@ -9,19 +9,19 @@ from sqlalchemy import Connection, Engine
 from sqlalchemy.engine import RootTransaction
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from contour.infrastructure.postgres.entity_repository import PostgresEntityRepository
-from contour.infrastructure.postgres.job_repository import PostgresJobRepository
-from contour.infrastructure.postgres.relationship_repository import PostgresRelationshipRepository
-from contour.infrastructure.postgres.run_repository import PostgresRunRepository
-from contour.repositories.entity import EntityRepository
-from contour.repositories.job import JobRepository
-from contour.repositories.relationship import RelationshipRepository
-from contour.repositories.run import RunRepository
-from contour.services.record_errors import (
+from contour.errors import (
     RecordConflictError,
     RecordPersistenceError,
     RecordReferenceError,
 )
+from contour.infrastructure.postgres.entity_repository import PostgresEntityRepository
+from contour.infrastructure.postgres.job_repository import PostgresJobRepository
+from contour.infrastructure.postgres.relationship_repository import PostgresRelationshipRepository
+from contour.infrastructure.postgres.run_repository import PostgresRunRepository
+from contour.jobs.application.job_store import JobRepository
+from contour.jobs.application.run_store import RunRepository
+from contour.knowledge.application.entity_store import EntityRepository
+from contour.knowledge.application.relationship_store import RelationshipRepository
 
 
 class PostgresRecordTransactionManager:

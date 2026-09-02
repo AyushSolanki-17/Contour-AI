@@ -7,13 +7,13 @@ import tempfile
 from hashlib import sha256
 from pathlib import Path
 
-from contour.domain.source_version import ContentDigest
-from contour.repositories.artifact import ArtifactWriteState
-from contour.services.artifact_errors import (
+from contour.sources.application.artifact_errors import (
     ArtifactIntegrityError,
     ArtifactNotFoundError,
     ArtifactPersistenceError,
 )
+from contour.sources.application.artifact_store import ArtifactWriteState
+from contour.sources.domain.source_version import ContentDigest
 
 
 class FileSystemArtifactRepository:

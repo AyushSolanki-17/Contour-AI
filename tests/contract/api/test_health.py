@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from contour.bootstrap import create_http_app
+from contour.composition import create_http_app
 from contour.settings import Settings
 
 

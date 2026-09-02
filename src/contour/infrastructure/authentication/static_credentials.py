@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contour.domain.access import Principal
+from contour.tenancy.domain.access import Principal
 
 
 class StaticCredentialVerifier:

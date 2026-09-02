@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from contour.domain.source_version import ContentDigest
-from contour.domain.time_point import TimePoint
 from contour.infrastructure.source.pep import (
     PepAcquiredContent,
     PepFixtureUnavailableError,
     PepSourceConfiguration,
 )
+from contour.sources.domain.source_version import ContentDigest
+from contour.time import TimePoint
 
 
 @dataclass(frozen=True, slots=True)

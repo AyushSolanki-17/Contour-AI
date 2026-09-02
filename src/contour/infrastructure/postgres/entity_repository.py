@@ -7,13 +7,13 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.domain.access import AccessContext
-from contour.domain.entity import Entity, EntityId
-from contour.domain.evidence import EvidenceId
-from contour.domain.tenant import TenantId
-from contour.domain.time_point import TimePoint
-from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.knowledge import entities, entity_evidence
+from contour.knowledge.domain.entity import Entity, EntityId
+from contour.knowledge.domain.evidence import EvidenceId
+from contour.tenancy.domain.access import AccessContext
+from contour.tenancy.domain.tenant import TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import WorkspaceId
 
 
 class PostgresEntityRepository:

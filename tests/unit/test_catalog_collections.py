@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from contour.domain.access import Principal, PrincipalId
-from contour.services.catalog_errors import CatalogConflictError, IdempotencyConflictError
-from contour.services.tenant_collections import TenantCollectionService
+from contour.sources.application.errors import CatalogConflictError, IdempotencyConflictError
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.tenancy.domain.access import Principal, PrincipalId
 
 
 class _AbsentPrincipal:

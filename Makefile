@@ -25,7 +25,7 @@ openapi-check:
 	uv run python scripts/export_openapi.py --check
 
 run:
-	set -a; . ./.env; set +a; uv run uvicorn --factory contour.bootstrap:create_app_from_environment --host 127.0.0.1 --port 8000
+	set -a; . ./.env; set +a; uv run uvicorn --factory contour.composition:create_app_from_environment --host 127.0.0.1 --port 8000
 
 precommit:
 	uv run pre-commit run --all-files

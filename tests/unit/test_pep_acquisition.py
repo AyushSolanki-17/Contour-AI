@@ -8,15 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from contour.domain import (
-    AcquiredContent,
-    ContentDigest,
-    Source,
-    SourceId,
-    TenantId,
-    TimePoint,
-    WorkspaceId,
-)
 from contour.infrastructure.source.pep import (
     PepAcquiredContent,
     PepAcquisitionService,
@@ -28,6 +19,12 @@ from contour.infrastructure.source.pep import (
     PepSourceValidationError,
 )
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
+from contour.sources.domain.acquired_content import AcquiredContent
+from contour.sources.domain.source import Source, SourceId
+from contour.sources.domain.source_version import ContentDigest
+from contour.tenancy.domain.tenant import TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import WorkspaceId
 
 _FIXTURE_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "pep_0723.html"
 _FIXTURE_DIGEST = "4e8af3f49e41dc047b7b5f583b324c6983b0730dfe8ec45e4d47c6ee0b2ebb5b"

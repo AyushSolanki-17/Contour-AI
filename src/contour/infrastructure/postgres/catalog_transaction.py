@@ -21,19 +21,19 @@ from contour.infrastructure.postgres.source_version_repository import (
 )
 from contour.infrastructure.postgres.tenant_repository import PostgresTenantRepository
 from contour.infrastructure.postgres.workspace_repository import PostgresWorkspaceRepository
-from contour.repositories.access import MembershipRepository, PrincipalRepository
-from contour.repositories.catalog_transaction import CatalogUnitOfWork
-from contour.repositories.evidence import EvidenceRepository
-from contour.repositories.idempotency import IdempotencyRepository
-from contour.repositories.source import SourceRepository
-from contour.repositories.source_version import SourceVersionRepository
-from contour.repositories.tenant import TenantRepository
-from contour.repositories.workspace import WorkspaceRepository
-from contour.services.catalog_errors import (
+from contour.knowledge.application.evidence_store import EvidenceRepository
+from contour.sources.application.errors import (
     CatalogConflictError,
     CatalogPersistenceError,
     CatalogReferenceError,
 )
+from contour.sources.application.idempotency_store import IdempotencyRepository
+from contour.sources.application.source_store import SourceRepository
+from contour.sources.application.version_store import SourceVersionRepository
+from contour.tenancy.application.catalog_store import CatalogUnitOfWork
+from contour.tenancy.application.ports import MembershipRepository, PrincipalRepository
+from contour.tenancy.application.tenant_store import TenantRepository
+from contour.workspaces.application.ports import WorkspaceRepository
 
 
 class PostgresCatalogTransactionManager:

@@ -1,4 +1,4 @@
-"""FastAPI application assembly for the HTTP delivery adapter."""
+"""FastAPI application assembly for Contour's public API."""
 
 from __future__ import annotations
 
@@ -13,12 +13,12 @@ from contour import __version__
 from contour.api.authentication import CredentialVerifier
 from contour.api.cursor import CursorCodec
 from contour.api.error_handler import register_exception_handlers
+from contour.api.health import HealthService
 from contour.api.routes.catalog import create_catalog_router
 from contour.api.routes.health import create_health_router
-from contour.services.health_service import HealthService
-from contour.services.source_collections import SourceCollectionService
-from contour.services.tenant_collections import TenantCollectionService
-from contour.services.workspace_collections import WorkspaceCollectionService
+from contour.sources.application.registration import SourceCollectionService
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.workspaces.application.collections import WorkspaceCollectionService
 
 type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
@@ -33,7 +33,7 @@ def create_app(
     cursor_secret: str = "contract-only-cursor-secret",
     lifespan: AppLifespan | None = None,
 ) -> FastAPI:
-    """Create the HTTP adapter from constructed application services.
+    """Create the API from explicitly constructed application services.
 
     Args:
         health_service: Framework-independent health use cases to expose.

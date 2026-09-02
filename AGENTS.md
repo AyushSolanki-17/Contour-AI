@@ -81,7 +81,7 @@ slice.
 - Routes translate and validate; services orchestrate; infrastructure performs
   external I/O.
 - Use explicit constructor/function injection and executable composition roots
-  under `bootstrap/`. Do not add a DI container or service locator without a
+  under `composition/`. Do not add a DI container or service locator without a
   demonstrated multi-scope, conditional-binding, or plugin-wiring requirement.
 - PostgreSQL and content-addressed artifacts hold durable state. Do not rely on process memory for job correctness.
 - Use SQLAlchemy Core as the default runtime PostgreSQL query API. Keep all
@@ -124,7 +124,7 @@ slice.
   module within that package; do not scatter them across concept modules or
   create generic catch-alls. Use a capability subpackage when it makes related
   concepts easier to discover. Capability package initializers may expose
-  stable domain or service contracts, and `bootstrap/__init__.py` may preserve
+  stable domain or service contracts, and `composition/__init__.py` may preserve
   executable entrypoints; layer and concrete-infrastructure initializers must
   not hide implementation imports. The conventional `services/`,
   `repositories/`, and `infrastructure/` packages must retain their declared

@@ -23,7 +23,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "contour"
 _FORBIDDEN_IMPORTS_BY_LAYER = {
     "domain": (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
         "contour.infrastructure",
         "contour.observability",
         "contour.repositories",
@@ -36,7 +36,7 @@ _FORBIDDEN_IMPORTS_BY_LAYER = {
     ),
     "repositories": (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
         "contour.infrastructure",
         "contour.observability",
         "contour.services",
@@ -48,7 +48,7 @@ _FORBIDDEN_IMPORTS_BY_LAYER = {
     ),
     "services": (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
         "contour.infrastructure",
         "contour.observability",
         "contour.settings",
@@ -59,16 +59,16 @@ _FORBIDDEN_IMPORTS_BY_LAYER = {
     ),
     "infrastructure": (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
     ),
     "api": (
-        "contour.bootstrap",
+        "contour.composition",
         "contour.infrastructure",
         "contour.repositories",
     ),
     "observability": (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
         "contour.domain",
         "contour.infrastructure",
         "contour.repositories",
@@ -113,22 +113,27 @@ def test_production_modules_do_not_use_ambiguous_catchall_names() -> None:
 
 def test_catalog_collection_use_cases_remain_capability_named() -> None:
     """Tenant, workspace, and source collections do not regress to one mixed service."""
-    service_root = _PACKAGE_ROOT / "services"
-    expected_modules = {
-        "tenant_collections.py",
-        "workspace_collections.py",
-        "source_collections.py",
+    expected_paths = {
+        "tenancy/application/collections.py",
+        "workspaces/application/collections.py",
+        "sources/application/registration.py",
     }
 
-    assert all((service_root / module).is_file() for module in expected_modules)
-    assert not (service_root / "catalog_collections.py").exists()
+    assert all((_PACKAGE_ROOT / path).is_file() for path in expected_paths)
+    assert not (_PACKAGE_ROOT / "sources/application/catalog_collections.py").exists()
+
+
+def test_superseded_global_layers_are_not_reintroduced() -> None:
+    """Business capabilities must not regress to global domain/service/repository layers."""
+    superseded = ("domain", "repositories", "services")
+    assert [name for name in superseded if (_PACKAGE_ROOT / name).exists()] == []
 
 
 def test_settings_remain_independent_of_runtime_frameworks_and_core_policy() -> None:
     """Process configuration stays reusable by migrations and composition roots."""
     forbidden_prefixes = (
         "contour.api",
-        "contour.bootstrap",
+        "contour.composition",
         "contour.domain",
         "contour.infrastructure",
         "contour.observability",
@@ -155,12 +160,12 @@ def test_infrastructure_initializers_do_not_hide_implementation_imports() -> Non
     assert violations == []
 
 
-def test_only_infrastructure_and_bootstrap_import_concrete_adapters() -> None:
+def test_only_infrastructure_and_composition_import_concrete_adapters() -> None:
     """Core and delivery code cannot bypass ports or executable composition."""
     violations: list[str] = []
     for path in sorted(_PACKAGE_ROOT.rglob("*.py")):
         relative = path.relative_to(_PACKAGE_ROOT)
-        if relative.parts[0] in {"bootstrap", "infrastructure"}:
+        if relative.parts[0] in {"composition", "infrastructure"}:
             continue
         for imported_name in _imported_names(path):
             if imported_name.startswith("contour.infrastructure"):
@@ -169,16 +174,17 @@ def test_only_infrastructure_and_bootstrap_import_concrete_adapters() -> None:
     assert violations == []
 
 
-def test_application_services_remain_source_neutral() -> None:
+def test_capability_application_code_remains_source_neutral() -> None:
     """PEP policy stays in source infrastructure, not reusable core policy."""
     violations: list[str] = []
-    for layer in ("domain", "services"):
-        for path in sorted((_PACKAGE_ROOT / layer).rglob("*.py")):
-            if "pep" in path.stem.lower():
-                violations.append(str(path.relative_to(_PACKAGE_ROOT)))
-            source = path.read_text(encoding="utf-8")
-            if "Pep" in source or "pep_" in source:
-                violations.append(str(path.relative_to(_PACKAGE_ROOT)))
+    for capability in ("tenancy", "workspaces", "sources", "knowledge", "jobs"):
+        for layer in ("application", "domain"):
+            for path in sorted((_PACKAGE_ROOT / capability / layer).rglob("*.py")):
+                if "pep" in path.stem.lower():
+                    violations.append(str(path.relative_to(_PACKAGE_ROOT)))
+                source = path.read_text(encoding="utf-8")
+                if "Pep" in source or "pep_" in source:
+                    violations.append(str(path.relative_to(_PACKAGE_ROOT)))
 
     assert violations == []
 

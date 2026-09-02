@@ -11,7 +11,7 @@ from sqlalchemy.exc import OperationalError
 from contour.infrastructure.postgres.catalog_transaction import (
     PostgresCatalogTransactionManager,
 )
-from contour.services.catalog_errors import CatalogPersistenceError
+from contour.sources.application.errors import CatalogPersistenceError
 
 
 def test_connection_failure_does_not_leak_database_details() -> None:

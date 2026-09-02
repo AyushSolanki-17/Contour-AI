@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from contour.domain import ContentDigest
 from contour.infrastructure.artifact.filesystem import FileSystemArtifactRepository
-from contour.repositories.artifact import ArtifactWriteState
-from contour.services.artifact_errors import (
+from contour.sources.application.artifact_errors import (
     ArtifactIntegrityError,
     ArtifactNotFoundError,
     ArtifactPersistenceError,
 )
+from contour.sources.application.artifact_store import ArtifactWriteState
+from contour.sources.domain.source_version import ContentDigest
 
 
 def _digest(content: bytes) -> ContentDigest:

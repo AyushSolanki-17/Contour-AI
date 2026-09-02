@@ -7,13 +7,13 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.domain.access import AccessContext
-from contour.domain.job import JobId
-from contour.domain.run import Run, RunId, RunStatus
-from contour.domain.tenant import TenantId
-from contour.domain.time_point import TimePoint
-from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.execution import runs
+from contour.jobs.domain.job import JobId
+from contour.jobs.domain.run import Run, RunId, RunStatus
+from contour.tenancy.domain.access import AccessContext
+from contour.tenancy.domain.tenant import TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import WorkspaceId
 
 
 class PostgresRunRepository:

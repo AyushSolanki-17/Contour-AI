@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import cast
 
 from contour.api.app import create_app
+from contour.api.health import HealthService
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
-from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.health_service import HealthService
-from contour.services.source_collections import SourceCollectionService
-from contour.services.tenant_collections import TenantCollectionService
-from contour.services.workspace_collections import WorkspaceCollectionService
+from contour.sources.application.registration import SourceCollectionService
+from contour.tenancy.application.catalog_store import CatalogTransactionManager
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.workspaces.application.collections import WorkspaceCollectionService
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "openapi" / "contour.openapi.json"

@@ -7,8 +7,8 @@ from typing import Protocol
 
 from fastapi import Header
 
-from contour.domain.access import Principal
-from contour.services.error import ApplicationError
+from contour.errors import ApplicationError
+from contour.tenancy.domain.access import Principal
 
 
 class UnauthenticatedError(ApplicationError):

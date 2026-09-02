@@ -7,17 +7,17 @@ from typing import cast
 from fastapi.testclient import TestClient
 
 from contour.api.app import create_app
-from contour.domain.access import AccessContext, Membership, Principal, PrincipalId
-from contour.domain.source import Source, SourceId
-from contour.domain.tenant import Tenant, TenantId
-from contour.domain.workspace import Workspace, WorkspaceId
+from contour.api.health import HealthService
+from contour.errors import ResourceNotFoundError
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
-from contour.services.catalog_errors import UnsupportedConnectorError
-from contour.services.health_service import HealthService
-from contour.services.resource_errors import ResourceNotFoundError
-from contour.services.source_collections import SourceCollectionService
-from contour.services.tenant_collections import TenantCollectionService
-from contour.services.workspace_collections import WorkspaceCollectionService
+from contour.sources.application.errors import UnsupportedConnectorError
+from contour.sources.application.registration import SourceCollectionService
+from contour.sources.domain.source import Source, SourceId
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.tenancy.domain.access import AccessContext, Membership, Principal, PrincipalId
+from contour.tenancy.domain.tenant import Tenant, TenantId
+from contour.workspaces.application.collections import WorkspaceCollectionService
+from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 _PRINCIPAL = Principal(PrincipalId("TEST", "catalog-client"))
 _AUTHORIZATION = {"Authorization": "Bearer catalog-token"}

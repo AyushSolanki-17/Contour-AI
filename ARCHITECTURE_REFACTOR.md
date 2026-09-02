@@ -72,7 +72,7 @@ command below; it is not a statement of future intent.
 - [ ] 20. `settings.py` is the sole environment-reading configuration boundary
       — define a dedicated cursor-signing secret rather than reuse the database
       password.
-- [x] 21. `bootstrap/http.py` is the explicit HTTP composition root.
+- [x] 21. `composition/http.py` is the explicit HTTP composition root.
 - [x] 22. Architecture, unit, contract, and PostgreSQL integration suites are
       organized by the boundary they protect.
 - [x] 23. The default suite and OpenAPI drift check preserve the published
@@ -262,7 +262,7 @@ consumers; it does not create a second package layout.
 | Knowledge records | `domain/entity.py`, `domain/relationship.py` | `services/knowledge_persistence.py`, knowledge transaction and record ports | PostgreSQL record transaction with entity and relationship repositories | Integration tests; future worker and API | Knowledge transaction view |
 | Execution records | `domain/job.py`, `domain/run.py` | `services/execution_persistence.py`, execution transaction and record ports | PostgreSQL record transaction with job and run repositories | Integration tests; future worker and API | Execution transaction view |
 | Health and runtime | no durable business model | `services/health_service.py` and readiness port | PostgreSQL readiness probe | Health route, HTTP app, and bootstrap | none |
-| Process configuration and observability | no business policy | no service dependency | `settings.py`, `observability/logging.py` | `bootstrap/http.py` only for construction and lifecycle | process lifecycle |
+| Process configuration and observability | no business policy | no service dependency | `settings.py`, `observability/logging.py` | `composition/http.py` only for construction and lifecycle | process lifecycle |
 
 The only discovered duplicate architecture vocabulary was the empty legacy
 `application/` and `adapters/` skeleton. It was removed. The former generic
@@ -444,7 +444,7 @@ contour/
 ├── infrastructure/
 │   └── postgres/
 │
-├── bootstrap/
+├── composition/
 │
 └── observability/
 
@@ -811,7 +811,7 @@ Do not maintain redundant [`config.py`](http://config.py), [`settings.py`](http:
 
 # 21. Bootstrap / composition root
 
-Dependency construction should happen in bootstrap/composition-root code.
+Dependency construction should happen in composition/composition-root code.
 
 Bootstrap may assemble:
 
@@ -1236,7 +1236,7 @@ Update architecture documentation to explain:
 8. transaction ownership
 9. persistence boundaries
 10. error boundaries
-11. bootstrap/composition
+11. composition/composition
 12. where developers should put new functionality
 
 Documentation must describe the actual resulting code.

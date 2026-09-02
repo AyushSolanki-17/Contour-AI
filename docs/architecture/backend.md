@@ -40,7 +40,55 @@ flowchart LR
 8. Vendor-specific types remain inside infrastructure.
 9. Simple deterministic implementations remain the reference until measurement justifies a replacement.
 
-## Accepted package boundaries
+## Capability ownership (superseding the former global-layer layout)
+
+Contour is organized first by business capability, not by a flat global domain,
+services, and repositories taxonomy. The former global `domain/`, `services/`,
+and `repositories/` paths, plus the transitional `delivery/http/` path, are
+removed; no compatibility imports are retained. Each implemented capability
+owns its domain values and application use cases together:
+
+```text
+tenancy/          tenant identity, principals, memberships, and verified access
+workspaces/       tenant-owned workspace values and use cases
+sources/          registration, acquisition, versions, and artifact admission
+knowledge/        entities, relationships, and exact evidence records
+jobs/             durable jobs and run attempts
+api/    FastAPI parsing, schemas, authentication, cursors, and responses
+infrastructure/   PostgreSQL, filesystem, source, and credential implementations
+errors/           stable cross-capability application errors
+identifiers.py    namespaced identity and digest validation
+time.py           explicit-unknown temporal value
+validation.py     generic framework-independent validation
+api/health.py     health endpoint service and readiness contract
+composition/      executable dependency composition
+```
+
+Application persistence contracts live beside the capability that consumes
+them. PostgreSQL modules are concrete implementations only. HTTP invokes
+capability use cases and never concrete infrastructure. This change was
+admitted because the prior global catalog and records transactions combined
+separate tenancy/workspace/source and knowledge/execution responsibilities;
+the external HTTP contract, migrations, and data invariants remain unchanged.
+
+### API controller pattern
+
+`api/` is the single FastAPI delivery layer. It follows a controller-and-wire-
+contract pattern rather than MVC: route functions parse HTTP input, obtain an
+authenticated principal, call a capability use case, and map its result to a
+Pydantic response schema. Domain models remain in their owning capability;
+creating API "models" would duplicate business meaning and validation.
+
+`api/app.py` assembles routers and error translation. Router factories receive
+their use cases, credential verifier, and cursor codec as explicit arguments.
+`composition/http.py` constructs those dependencies. This makes dependencies
+visible in the constructor call chain without a DI container or service
+locator.
+
+## Superseded global-layer layout
+
+The following historical layout is retained only to explain the architecture
+change above. It is not an accepted package model and must not be recreated.
 
 Contour organizes the modular monolith by architectural boundary first and by
 product capability inside that boundary. These ownership and dependency rules
@@ -142,7 +190,7 @@ src/contour/
     schemas/catalog.py            Pydantic-only catalog wire contracts
     error_handler.py              service-error to HTTP translation
     app.py                        HTTP delivery assembly
-  bootstrap/
+  composition/
     http.py                       HTTP composition and process lifetimes
   observability/
     logging.py                    logging configuration and secret redaction
@@ -250,7 +298,7 @@ clearly named shared module within the owning package. Use a capability
 subpackage when it makes related concepts easier to discover. Preserve stable
 package-level public imports only for an intentional facade. Capability
 `__init__.py` files may expose stable domain or service contracts, and
-`bootstrap/__init__.py` may preserve executable entrypoints; layer packages and
+`composition/__init__.py` may preserve executable entrypoints; layer packages and
 concrete infrastructure packages remain free of implementation re-exports so
 imports show the actual owner. `services/`, `repositories/`, and
 `infrastructure/` are accepted layer names with strict ownership; their modules
@@ -347,7 +395,7 @@ rebuild is never a production recovery strategy.
 ## Dependency wiring and lifetimes
 
 Use explicit constructor or function injection and assemble the object graph in
-`bootstrap/<executable>.py`. This is dependency injection without a runtime DI
+`composition/<executable>.py`. This is dependency injection without a runtime DI
 framework: dependencies are visible to type checking and tests, construction
 failures happen at startup, and core packages contain no global service lookup.
 

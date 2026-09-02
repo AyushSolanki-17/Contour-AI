@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Protocol
 
-from contour.domain.acquired_content import AcquiredContent
-from contour.domain.source import Source, SourceId
-from contour.domain.source_version import ContentDigest
-from contour.domain.time_point import TimePoint
-from contour.services.error import ApplicationError
+from contour.errors import ApplicationError
+from contour.sources.domain.acquired_content import AcquiredContent
+from contour.sources.domain.source import Source, SourceId
+from contour.sources.domain.source_version import ContentDigest
+from contour.time import TimePoint
 
 _PEP_NAMESPACE = "SOURCE:PEP"
 _PEP_SOURCE_TYPE = "pep"

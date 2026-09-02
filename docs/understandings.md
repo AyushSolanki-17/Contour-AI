@@ -49,7 +49,7 @@ are explicitly marked; they do not describe shipped behavior.
 | **Repository port** | A behavior-focused interface used by a service. It shields core logic from a database or storage product. | `repositories/evidence.py` defines `EvidenceRepository.save_evidence(...)`; PostgreSQL implements it today. |
 | **Infrastructure implementation** | An implementation of a port for a concrete technology. It contains connection, query, and row-mapping details. | `infrastructure/postgres/evidence_repository.py` maps `EvidenceLocator` to the `evidence` table. |
 | **Unit of work** | A short-lived transaction boundary that gives multiple repositories one atomic commit or rollback. | Catalog admission writes its four records through repositories bound to one PostgreSQL connection. |
-| **Composition root** | The executable edge that creates process resources and supplies dependencies explicitly. Core code never looks them up globally. | `bootstrap/http.py` creates the pooled PostgreSQL engine, readiness implementation, and health service, then gives FastAPI a shutdown lifespan. |
+| **Composition root** | The executable edge that creates process resources and supplies dependencies explicitly. Core code never looks them up globally. | `composition/http.py` creates the pooled PostgreSQL engine, readiness implementation, and health service, then gives FastAPI a shutdown lifespan. |
 | **Delivery adapter / controller** | The outer protocol-specific layer. HTTP routes, future CLI commands, and future MCP tools validate and translate their protocol, then call the same service. | A future FastAPI route and a CLI command can both invoke `CatalogAdmissionService`; neither embeds its business rules. |
 
 ## Working rule

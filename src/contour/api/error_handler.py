@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from contour.api.schemas.error import ErrorBody, ErrorDetail, ErrorResponse
-from contour.services.error import ApplicationError
+from contour.errors import ApplicationError
 
 _HTTP_STATUS_BY_ERROR_CODE = {
     "dependency.unavailable": HTTPStatus.SERVICE_UNAVAILABLE,

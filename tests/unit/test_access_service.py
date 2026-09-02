@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from contour.domain.access import Membership, Principal, PrincipalId
-from contour.domain.tenant import Tenant, TenantId
-from contour.services.access_service import TenantAccessService
-from contour.services.resource_errors import ResourceNotFoundError
+from contour.errors import ResourceNotFoundError
+from contour.tenancy.application.access import TenantAccessService
+from contour.tenancy.domain.access import Membership, Principal, PrincipalId
+from contour.tenancy.domain.tenant import Tenant, TenantId
 
 
 class _Principals:

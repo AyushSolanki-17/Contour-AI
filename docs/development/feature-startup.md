@@ -42,7 +42,7 @@ small and obvious.
 | Artifact, source, authentication, or provider implementation | `infrastructure/<technology-or-capability>/` |
 | HTTP parsing, authentication extraction, schema, cursor, response, or status mapping | `api/` |
 | Future CLI command, output formatting, and exit-code mapping | `cli/` |
-| Dependency construction and process resource lifetime | `bootstrap/<executable>.py` |
+| Dependency construction and process resource lifetime | `composition/<executable>.py` |
 | Durable schema transition | a new immutable Alembic revision plus matching Core metadata |
 
 HTTP, a future CLI, workers, and scheduled jobs are peer delivery adapters.

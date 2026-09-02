@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from sqlalchemy import Connection, insert, select
 
-from contour.domain.access import Membership, Principal, PrincipalId
-from contour.domain.tenant import Tenant, TenantId
 from contour.infrastructure.postgres.tables.catalog import memberships, principals, tenants
+from contour.tenancy.domain.access import Membership, Principal, PrincipalId
+from contour.tenancy.domain.tenant import Tenant, TenantId
 
 
 class PostgresPrincipalRepository:

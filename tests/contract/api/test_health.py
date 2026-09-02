@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from contour.bootstrap import create_http_app
+from contour.composition import create_http_app
 from contour.settings import Settings
 
 
@@ -25,6 +25,7 @@ def settings() -> Settings:
             "CONTOUR_POSTGRES_USER": "contour",
             "CONTOUR_POSTGRES_PASSWORD": "not-for-logs",
             "CONTOUR_POSTGRES_PORT": "5432",
+            "CONTOUR_CURSOR_SIGNING_SECRET": "cursor-secret-for-tests",
         }
     )
 

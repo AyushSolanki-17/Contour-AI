@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from contour.api.health import HealthService
 from contour.api.schemas.error import ErrorResponse
 from contour.api.schemas.health import HealthResponse
-from contour.services.health_service import HealthService
 
 
 def create_health_router(health_service: HealthService) -> APIRouter:

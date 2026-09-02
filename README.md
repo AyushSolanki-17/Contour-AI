@@ -17,10 +17,11 @@ User-interface applications and other independently deployable components live i
 Contour is in early development. The project scope, backend architecture, knowledge model, development roadmap, and testing standard live in the [engineering documentation](docs/README.md). API reference and operational guidance will be added alongside the code they describe.
 
 The Python package uses conventional layer names with strict ownership:
-`api/` contains FastAPI routes and Pydantic schemas, `services/` contains use
-cases, `domain/` contains business concepts, `repositories/` contains
-capability-specific persistence interfaces, and `infrastructure/` contains
-PostgreSQL and other external-system implementations. Alembic migrations remain
+`api/` contains FastAPI routes and Pydantic schemas. Business
+capabilities own their domain concepts and application use cases under
+`tenancy/`, `workspaces/`, `sources/`, `knowledge/`, and `jobs/`; their
+persistence contracts live with their consuming capability. `infrastructure/`
+contains PostgreSQL and other external-system implementations. Alembic migrations remain
 separate from runtime schema declarations.
 
 Non-trivial changes begin with the
@@ -113,8 +114,9 @@ before recovering a failed local migration.
 
 ## Start the backend and check health
 
-The backend requires the PostgreSQL variables in `.env`; no database password,
-name, user, or port is invented at startup. After configuring and starting the
+The backend requires the PostgreSQL variables and a distinct
+`CONTOUR_CURSOR_SIGNING_SECRET` in `.env`; no database password, name, user,
+port, or cursor secret is invented at startup. After configuring and starting the
 local database, start the loopback-only API server. The target loads the
 development-only `.env` variables for this command:
 

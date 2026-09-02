@@ -50,6 +50,9 @@ jobs:
       CONTOUR_POSTGRES_PASSWORD: contour-ci-only
       CONTOUR_POSTGRES_HOST: 127.0.0.1
       CONTOUR_POSTGRES_PORT: 5432
+      # Test-only signing material keeps integration settings validation aligned
+      # with the production requirement without exposing a production secret.
+      CONTOUR_CURSOR_SIGNING_SECRET: contour-ci-cursor-signing-only
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

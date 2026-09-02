@@ -15,22 +15,7 @@ from alembic import command
 from alembic.config import Config
 from psycopg import sql
 
-from contour.domain import (
-    AccessContext,
-    AcquiredContent,
-    ContentDigest,
-    Membership,
-    Principal,
-    PrincipalId,
-    Source,
-    SourceId,
-    SourceVersionId,
-    Tenant,
-    TenantId,
-    TimePoint,
-    Workspace,
-    WorkspaceId,
-)
+from contour.errors import ResourceNotFoundError
 from contour.infrastructure.artifact.filesystem import FileSystemArtifactRepository
 from contour.infrastructure.postgres.catalog_transaction import (
     PostgresCatalogTransactionManager,
@@ -39,16 +24,22 @@ from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.tables.catalog import source_versions
 from contour.infrastructure.source.pep import PepAcquisitionService, PepPreflightService
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
-from contour.repositories.artifact import ArtifactWriteState
-from contour.services.artifact_errors import (
+from contour.settings import DatabaseSettings, Settings
+from contour.sources.application.artifact_errors import (
     ArtifactIntegrityError,
     ArtifactNotFoundError,
     ArtifactPersistenceError,
 )
-from contour.services.catalog_errors import CatalogConflictError
-from contour.services.resource_errors import ResourceNotFoundError
-from contour.services.source_persistence import SourcePersistenceService
-from contour.settings import DatabaseSettings, Settings
+from contour.sources.application.artifact_store import ArtifactWriteState
+from contour.sources.application.errors import CatalogConflictError
+from contour.sources.application.persistence import SourcePersistenceService
+from contour.sources.domain.acquired_content import AcquiredContent
+from contour.sources.domain.source import Source, SourceId
+from contour.sources.domain.source_version import ContentDigest, SourceVersionId
+from contour.tenancy.domain.access import AccessContext, Membership, Principal, PrincipalId
+from contour.tenancy.domain.tenant import Tenant, TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 _FIXTURE_PATH = _REPOSITORY_ROOT / "tests" / "fixtures" / "pep_0723.html"

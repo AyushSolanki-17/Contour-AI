@@ -6,13 +6,13 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.domain.access import AccessContext
-from contour.domain.evidence import EvidenceId, EvidenceLocator
-from contour.domain.source import SourceId
-from contour.domain.source_version import ContentDigest, SourceVersionId
-from contour.domain.tenant import TenantId
-from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import evidence
+from contour.knowledge.domain.evidence import EvidenceId, EvidenceLocator
+from contour.sources.domain.source import SourceId
+from contour.sources.domain.source_version import ContentDigest, SourceVersionId
+from contour.tenancy.domain.access import AccessContext
+from contour.tenancy.domain.tenant import TenantId
+from contour.workspaces.domain.workspace import WorkspaceId
 
 
 class PostgresEvidenceRepository:

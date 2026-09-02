@@ -6,22 +6,15 @@ from datetime import UTC, datetime
 
 import pytest
 
-from contour.domain import (
-    Entity,
-    EntityId,
-    EvidenceId,
-    Job,
-    JobId,
-    Relationship,
-    RelationshipId,
-    Run,
-    RunId,
-    SourceId,
-    TenantId,
-    TimePoint,
-    Workspace,
-    WorkspaceId,
-)
+from contour.jobs.domain.job import Job, JobId
+from contour.jobs.domain.run import Run, RunId
+from contour.knowledge.domain.entity import Entity, EntityId
+from contour.knowledge.domain.evidence import EvidenceId
+from contour.knowledge.domain.relationship import Relationship, RelationshipId
+from contour.sources.domain.source import SourceId
+from contour.tenancy.domain.tenant import TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 
 def workspace_id() -> WorkspaceId:

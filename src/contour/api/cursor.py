@@ -9,7 +9,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from contour.services.resource_errors import ResourceNotFoundError
+from contour.errors import ResourceNotFoundError
 
 
 @dataclass(frozen=True, slots=True)

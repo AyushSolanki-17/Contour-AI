@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import cast
 
 from contour.api.app import create_app
+from contour.api.health import HealthService
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
-from contour.repositories.catalog_transaction import CatalogTransactionManager
-from contour.services.catalog_collections import CatalogCollectionService
-from contour.services.health_service import HealthService
+from contour.sources.application.registration import SourceCollectionService
+from contour.tenancy.application.catalog_store import CatalogTransactionManager
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.workspaces.application.collections import WorkspaceCollectionService
 
 
 class AvailableProbe:
@@ -24,7 +26,9 @@ def test_checked_in_openapi_matches_public_application_contract() -> None:
 
     app = create_app(
         health_service=HealthService(AvailableProbe()),
-        catalog_service=CatalogCollectionService(
+        tenant_service=TenantCollectionService(cast(CatalogTransactionManager, object())),
+        workspace_service=WorkspaceCollectionService(cast(CatalogTransactionManager, object())),
+        source_service=SourceCollectionService(
             cast(CatalogTransactionManager, object()), frozenset({"pep"})
         ),
         credential_verifier=StaticCredentialVerifier({}),

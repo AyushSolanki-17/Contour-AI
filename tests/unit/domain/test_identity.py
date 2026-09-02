@@ -7,17 +7,12 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from contour.domain import (
-    ContentDigest,
-    EvidenceId,
-    EvidenceLocator,
-    SourceId,
-    SourceVersion,
-    SourceVersionId,
-    TenantId,
-    TimePoint,
-    WorkspaceId,
-)
+from contour.knowledge.domain.evidence import EvidenceId, EvidenceLocator
+from contour.sources.domain.source import SourceId
+from contour.sources.domain.source_version import ContentDigest, SourceVersion, SourceVersionId
+from contour.tenancy.domain.tenant import TenantId
+from contour.time import TimePoint
+from contour.workspaces.domain.workspace import WorkspaceId
 
 
 def source_id() -> SourceId:

@@ -13,6 +13,7 @@ def valid_environment() -> dict[str, str]:
         "CONTOUR_POSTGRES_USER": "contour",
         "CONTOUR_POSTGRES_PASSWORD": "not-for-logs",
         "CONTOUR_POSTGRES_PORT": "5432",
+        "CONTOUR_CURSOR_SIGNING_SECRET": "cursor-secret-for-tests",
     }
 
 
@@ -29,6 +30,15 @@ def test_settings_reject_missing_required_configuration() -> None:
     del environment["CONTOUR_POSTGRES_PASSWORD"]
 
     with pytest.raises(ConfigurationError, match="CONTOUR_POSTGRES_PASSWORD"):
+        Settings.from_environment(environment)
+
+
+def test_settings_require_a_distinct_cursor_signing_secret() -> None:
+    """Cursor signing never silently reuses the database credential."""
+    environment = valid_environment()
+    del environment["CONTOUR_CURSOR_SIGNING_SECRET"]
+
+    with pytest.raises(ConfigurationError, match="CONTOUR_CURSOR_SIGNING_SECRET"):
         Settings.from_environment(environment)
 
 

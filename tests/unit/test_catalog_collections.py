@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from contour.domain.access import Principal, PrincipalId
-from contour.services.catalog_collections import CatalogCollectionService
-from contour.services.catalog_errors import CatalogConflictError, IdempotencyConflictError
+from contour.sources.application.errors import CatalogConflictError, IdempotencyConflictError
+from contour.tenancy.application.collections import TenantCollectionService
+from contour.tenancy.domain.access import Principal, PrincipalId
 
 
 class _AbsentPrincipal:
@@ -102,10 +102,7 @@ def test_concurrent_idempotency_loser_replays_the_committed_tenant() -> None:
         "id": "TENANT:committed",
         "name": "Engineering",
     }
-    service = CatalogCollectionService(
-        _Transactions((_digest("Engineering"), winner)),  # type: ignore[arg-type]
-        frozenset(),
-    )
+    service = TenantCollectionService(_Transactions((_digest("Engineering"), winner)))  # type: ignore[arg-type]
 
     tenant, replayed = service.create_tenant(
         Principal(PrincipalId("TEST", "principal")), "Engineering", "same-key"
@@ -119,10 +116,7 @@ def test_concurrent_idempotency_loser_replays_the_committed_tenant() -> None:
 def test_concurrent_idempotency_loser_rejects_a_different_payload() -> None:
     """A racing request cannot replay a winner accepted for different input."""
     winner = {"id": "TENANT:committed", "name": "Other"}
-    service = CatalogCollectionService(
-        _Transactions((_digest("Other"), winner)),  # type: ignore[arg-type]
-        frozenset(),
-    )
+    service = TenantCollectionService(_Transactions((_digest("Other"), winner)))  # type: ignore[arg-type]
 
     with pytest.raises(IdempotencyConflictError):
         service.create_tenant(

@@ -6,11 +6,11 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.domain.access import AccessContext
-from contour.domain.source import Source, SourceId
-from contour.domain.tenant import TenantId
-from contour.domain.workspace import WorkspaceId
 from contour.infrastructure.postgres.tables.catalog import sources
+from contour.sources.domain.source import Source, SourceId
+from contour.tenancy.domain.access import AccessContext
+from contour.tenancy.domain.tenant import TenantId
+from contour.workspaces.domain.workspace import WorkspaceId
 
 
 class PostgresSourceRepository:

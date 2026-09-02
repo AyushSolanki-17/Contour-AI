@@ -1,1 +1,1 @@
-"""Pydantic request and response models owned by the HTTP boundary."""
+"""HTTP request and response schemas."""

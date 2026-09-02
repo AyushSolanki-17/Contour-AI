@@ -24,14 +24,31 @@ from contour.domain.access import Principal
 from contour.domain.source import Source
 from contour.domain.tenant import TenantId
 from contour.domain.workspace import Workspace, WorkspaceId
-from contour.services.catalog_collections import CatalogCollectionService
 from contour.services.resource_errors import ResourceNotFoundError
+from contour.services.source_collections import SourceCollectionService
+from contour.services.tenant_collections import TenantCollectionService
+from contour.services.workspace_collections import WorkspaceCollectionService
 
 
 def create_catalog_router(
-    service: CatalogCollectionService, verifier: CredentialVerifier, cursors: CursorCodec
+    tenant_service: TenantCollectionService,
+    workspace_service: WorkspaceCollectionService,
+    source_service: SourceCollectionService,
+    verifier: CredentialVerifier,
+    cursors: CursorCodec,
 ) -> APIRouter:
-    """Bind authenticated catalog services to their frozen HTTP routes."""
+    """Bind focused catalog use cases to their frozen HTTP routes.
+
+    Args:
+        tenant_service: Tenant creation, visibility, and access-selection use cases.
+        workspace_service: Workspace collection use cases within verified access.
+        source_service: Source collection use cases within verified access.
+        verifier: Bearer credential verifier owned by the HTTP boundary.
+        cursors: Scope-bound pagination token codec.
+
+    Returns:
+        Router containing the versioned catalog HTTP contract.
+    """
     router = APIRouter(prefix="/api/v1", tags=["product"])
     principal = bearer_principal(verifier)
 
@@ -50,7 +67,7 @@ def create_catalog_router(
         authenticated: Principal = Depends(principal),
     ) -> TenantResponse:
         """Create a tenant and membership for the authenticated principal."""
-        tenant, replayed = service.create_tenant(authenticated, body.name, idempotency_key)
+        tenant, replayed = tenant_service.create_tenant(authenticated, body.name, idempotency_key)
         if replayed:
             response.status_code = 200
         return TenantResponse(id=str(tenant.id), name=tenant.name)
@@ -64,7 +81,7 @@ def create_catalog_router(
         """List only tenants that the authenticated principal can access."""
         scope = CursorScope(str(authenticated.id), "global", "tenants", {})
         page, next_cursor = _page(
-            service.list_tenants(authenticated), cursor, limit, scope, cursors
+            tenant_service.list_tenants(authenticated), cursor, limit, scope, cursors
         )
         return TenantPage(
             items=tuple(TenantResponse(id=str(item.id), name=item.name) for item in page),
@@ -93,8 +110,10 @@ def create_catalog_router(
         authenticated: Principal = Depends(principal),
     ) -> WorkspaceResponse:
         """Create or safely replay one workspace in an accessible tenant."""
-        access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
-        workspace, replayed = service.create_workspace(access, body.name, idempotency_key)
+        access = tenant_service.open_tenant(
+            authenticated, _tenant_id(tenant_id), _correlation_id(request)
+        )
+        workspace, replayed = workspace_service.create_workspace(access, body.name, idempotency_key)
         if replayed:
             response.status_code = 200
         return WorkspaceResponse(
@@ -114,9 +133,13 @@ def create_catalog_router(
         authenticated: Principal = Depends(principal),
     ) -> WorkspacePage:
         """List workspaces in one verified tenant in deterministic order."""
-        access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
+        access = tenant_service.open_tenant(
+            authenticated, _tenant_id(tenant_id), _correlation_id(request)
+        )
         scope = CursorScope(str(authenticated.id), str(access.tenant_id), "workspaces", {})
-        page, next_cursor = _page(service.list_workspaces(access), cursor, limit, scope, cursors)
+        page, next_cursor = _page(
+            workspace_service.list_workspaces(access), cursor, limit, scope, cursors
+        )
         return WorkspacePage(
             items=tuple(_workspace_response(item) for item in page), cursor=next_cursor
         )
@@ -144,8 +167,10 @@ def create_catalog_router(
         authenticated: Principal = Depends(principal),
     ) -> SourceResponse:
         """Register or safely replay one source in an accessible workspace."""
-        access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
-        source, replayed = service.create_source(
+        access = tenant_service.open_tenant(
+            authenticated, _tenant_id(tenant_id), _correlation_id(request)
+        )
+        source, replayed = source_service.create_source(
             access=access,
             workspace_id=_workspace_id(workspace_id),
             connector_kind=body.connector_kind,
@@ -173,13 +198,15 @@ def create_catalog_router(
         authenticated: Principal = Depends(principal),
     ) -> SourcePage:
         """List sources in one verified workspace in deterministic order."""
-        access = service.open_tenant(authenticated, _tenant_id(tenant_id), _correlation_id(request))
+        access = tenant_service.open_tenant(
+            authenticated, _tenant_id(tenant_id), _correlation_id(request)
+        )
         nested_workspace_id = _workspace_id(workspace_id)
         scope = CursorScope(
             str(authenticated.id), str(access.tenant_id), f"sources:{nested_workspace_id}", {}
         )
         page, next_cursor = _page(
-            service.list_sources(access, nested_workspace_id), cursor, limit, scope, cursors
+            source_service.list_sources(access, nested_workspace_id), cursor, limit, scope, cursors
         )
         return SourcePage(items=tuple(_source_response(item) for item in page), cursor=next_cursor)
 

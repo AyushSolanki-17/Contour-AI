@@ -96,7 +96,9 @@ src/contour/
     error.py                      shared service-error base only
     health_service.py             framework-neutral health use cases
     access_service.py             membership-backed Tenant access
-    catalog_collections.py        authenticated Tenant/Workspace/Source use cases
+    tenant_collections.py         authenticated Tenant creation, visibility, and selection
+    workspace_collections.py      tenant-scoped Workspace creation and listing
+    source_collections.py         workspace-scoped Source registration and listing
     catalog_service.py            atomic catalog admission use case
     catalog_errors.py             safe catalog and operation-replay failures
     knowledge_persistence.py      atomic Entity/Relationship admission

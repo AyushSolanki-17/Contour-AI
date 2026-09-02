@@ -15,8 +15,10 @@ from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogT
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.readiness import PostgresReadinessProbe
 from contour.observability.logging import configure_logging
-from contour.services.catalog_collections import CatalogCollectionService
 from contour.services.health_service import HealthService, ReadinessProbe
+from contour.services.source_collections import SourceCollectionService
+from contour.services.tenant_collections import TenantCollectionService
+from contour.services.workspace_collections import WorkspaceCollectionService
 from contour.settings import Settings
 
 
@@ -41,7 +43,9 @@ def create_http_app(
     verifier = StaticCredentialVerifier(_configured_principals(settings.demo_credentials))
     return create_app(
         health_service=health_service,
-        catalog_service=CatalogCollectionService(transactions, frozenset({"pep"})),
+        tenant_service=TenantCollectionService(transactions),
+        workspace_service=WorkspaceCollectionService(transactions),
+        source_service=SourceCollectionService(transactions, frozenset({"pep"})),
         credential_verifier=verifier,
         cursor_secret=settings.cursor_signing_secret,
         lifespan=_database_lifespan(engine),
@@ -53,6 +57,11 @@ def _database_lifespan(engine: Engine) -> AppLifespan:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """Dispose the application-owned database pool during ASGI shutdown.
+
+        Yields:
+            Control to FastAPI while process-scoped dependencies are available.
+        """
         try:
             yield
         finally:

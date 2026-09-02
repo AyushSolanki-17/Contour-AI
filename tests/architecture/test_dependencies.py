@@ -111,6 +111,19 @@ def test_production_modules_do_not_use_ambiguous_catchall_names() -> None:
     assert ambiguous_paths == []
 
 
+def test_catalog_collection_use_cases_remain_capability_named() -> None:
+    """Tenant, workspace, and source collections do not regress to one mixed service."""
+    service_root = _PACKAGE_ROOT / "services"
+    expected_modules = {
+        "tenant_collections.py",
+        "workspace_collections.py",
+        "source_collections.py",
+    }
+
+    assert all((service_root / module).is_file() for module in expected_modules)
+    assert not (service_root / "catalog_collections.py").exists()
+
+
 def test_settings_remain_independent_of_runtime_frameworks_and_core_policy() -> None:
     """Process configuration stays reusable by migrations and composition roots."""
     forbidden_prefixes = (

@@ -123,6 +123,17 @@ def test_catalog_collection_use_cases_remain_capability_named() -> None:
     assert not (_PACKAGE_ROOT / "sources/application/catalog_collections.py").exists()
 
 
+def test_record_transactions_remain_capability_scoped() -> None:
+    """Knowledge and job units of work never regress to one mixed adapter."""
+    expected_paths = {
+        "infrastructure/postgres/job_transaction.py",
+        "infrastructure/postgres/knowledge_transaction.py",
+    }
+
+    assert all((_PACKAGE_ROOT / path).is_file() for path in expected_paths)
+    assert not (_PACKAGE_ROOT / "infrastructure/postgres/records_transaction.py").exists()
+
+
 def test_superseded_global_layers_are_not_reintroduced() -> None:
     """Business capabilities must not regress to global domain/service/repository layers."""
     superseded = ("domain", "repositories", "services")

@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from hashlib import sha256
-from json import dumps
 from uuid import uuid4
 
 from contour.errors import ResourceNotFoundError
 from contour.sources.application.errors import (
     CatalogConflictError,
-    IdempotencyConflictError,
     SourceAlreadyRegisteredError,
     UnsupportedConnectorError,
 )
+from contour.sources.application.source_registration_replay import SourceRegistrationReplay
 from contour.sources.domain.source import Source, SourceId
 from contour.tenancy.application.catalog_store import CatalogTransactionManager
 from contour.tenancy.domain.access import AccessContext
-from contour.tenancy.domain.tenant import TenantId
 from contour.workspaces.domain.workspace import WorkspaceId
 
 
@@ -71,24 +67,25 @@ class SourceCollectionService:
         """
         if connector_kind not in self._supported_connectors:
             raise UnsupportedConnectorError()
-        payload = {
-            "connector_kind": connector_kind,
-            "canonical_locator": canonical_locator,
-            "scope": scope,
-            "license": license_name,
-            "data_classification": data_classification,
-        }
-        digest = _payload_digest(payload)
-        operation = f"sources:{workspace_id}"
+        replay = SourceRegistrationReplay(
+            access=access,
+            workspace_id=workspace_id,
+            key=idempotency_key,
+            payload={
+                "connector_kind": connector_kind,
+                "canonical_locator": canonical_locator,
+                "scope": scope,
+                "license": license_name,
+                "data_classification": data_classification,
+            },
+        )
         try:
             with self._transactions.transaction() as transaction:
                 if transaction.workspaces.get_workspace(access, workspace_id) is None:
                     raise ResourceNotFoundError()
-                replay = transaction.idempotency.get_result(
-                    access.principal, str(access.tenant_id), operation, idempotency_key
-                )
-                if replay is not None:
-                    return _source_from_replay(replay, digest), True
+                replayed_source = replay.read(transaction.idempotency)
+                if replayed_source is not None:
+                    return replayed_source, True
                 if transaction.sources.get_source_by_locator(
                     access, workspace_id, connector_kind, canonical_locator
                 ):
@@ -104,16 +101,9 @@ class SourceCollectionService:
                     data_classification,
                 )
                 transaction.sources.save_source(access, source)
-                transaction.idempotency.save_result(
-                    access.principal,
-                    str(access.tenant_id),
-                    operation,
-                    idempotency_key,
-                    digest,
-                    _source_result(source),
-                )
+                replay.save(transaction.idempotency, source)
         except CatalogConflictError:
-            replayed = self._replay(access, operation, idempotency_key, digest)
+            replayed = self._replay(replay)
             if replayed is not None:
                 return replayed, True
             with self._transactions.transaction() as transaction:
@@ -143,137 +133,14 @@ class SourceCollectionService:
                 raise ResourceNotFoundError()
             return transaction.sources.list_sources(access, workspace_id)
 
-    def _replay(
-        self, access: AccessContext, operation: str, key: str, digest: str
-    ) -> Source | None:
+    def _replay(self, replay: SourceRegistrationReplay) -> Source | None:
         """Read a concurrent winner's durable source result.
 
         Args:
-            access: Verified scope that owns the idempotency namespace.
-            operation: Nested operation identifier used for the source route.
-            key: Idempotency key that may have concurrently committed.
-            digest: Canonical request digest required for replay equivalence.
+            replay: Source-specific durable replay contract for the request.
 
         Returns:
             The accepted source when a concurrent request committed, otherwise ``None``.
         """
         with self._transactions.transaction() as transaction:
-            replay = transaction.idempotency.get_result(
-                access.principal, str(access.tenant_id), operation, key
-            )
-        return None if replay is None else _source_from_replay(replay, digest)
-
-
-def _payload_digest(payload: Mapping[str, str | None]) -> str:
-    """Create a canonical source-request digest for replay comparison.
-
-    Args:
-        payload: Source fields that define replay equivalence.
-
-    Returns:
-        SHA-256 digest over canonical JSON input.
-    """
-    return sha256(dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-
-
-def _source_result(source: Source) -> dict[str, str | None]:
-    """Serialize durable source fields needed to reconstruct a replay.
-
-    Args:
-        source: Newly accepted source.
-
-    Returns:
-        JSON-safe result stored beside the idempotency key.
-    """
-    return {
-        "id": str(source.id),
-        "tenant_id": str(source.tenant_id),
-        "workspace_id": str(source.workspace_id),
-        "connector_kind": source.source_type,
-        "canonical_locator": source.canonical_locator,
-        "scope": source.scope,
-        "license": source.license,
-        "data_classification": source.data_classification,
-    }
-
-
-def _source_from_replay(replay: tuple[str, dict[str, str | None]], digest: str) -> Source:
-    """Validate and reconstruct a source from an idempotency record.
-
-    Args:
-        replay: Stored request digest and serialized source result.
-        digest: Digest of the request currently being processed.
-
-    Returns:
-        Reconstructed source from the durable replay result.
-
-    Raises:
-        IdempotencyConflictError: If this key has different accepted input.
-    """
-    stored_digest, result = replay
-    if stored_digest != digest:
-        raise IdempotencyConflictError()
-    return Source(
-        _source_id(str(result["id"])),
-        _tenant_id(str(result["tenant_id"])),
-        _workspace_id(str(result["workspace_id"])),
-        str(result["canonical_locator"]),
-        str(result["connector_kind"]),
-        str(result["scope"]),
-        result["license"],
-        str(result["data_classification"]),
-    )
-
-
-def _source_id(value: str) -> SourceId:
-    """Rebuild a source identity from trusted internal replay data.
-
-    Args:
-        value: Serialized namespaced source identifier.
-
-    Returns:
-        Reconstructed source identity.
-
-    Raises:
-        ValueError: If durable replay data has an invalid identifier shape.
-    """
-    namespace, separator, local_value = value.rpartition(":")
-    if not separator:
-        raise ValueError("invalid stored identifier")
-    return SourceId(namespace, local_value)
-
-
-def _tenant_id(value: str) -> TenantId:
-    """Rebuild a tenant identity from trusted internal replay data.
-
-    Args:
-        value: Serialized namespaced tenant identifier.
-
-    Returns:
-        Reconstructed tenant identity.
-
-    Raises:
-        ValueError: If durable replay data has an invalid identifier shape.
-    """
-    namespace, separator, local_value = value.rpartition(":")
-    if not separator:
-        raise ValueError("invalid stored identifier")
-    return TenantId(namespace, local_value)
-
-
-def _workspace_id(value: str) -> WorkspaceId:
-    """Rebuild a workspace identity from trusted internal replay data.
-
-    Args:
-        value: Serialized namespaced workspace identifier.
-
-    Returns:
-        Reconstructed workspace identity.
-
-    Raises:
-        ValueError: If durable replay data has an invalid identifier shape.
-    """
-    namespace, separator, local_value = value.rpartition(":")
-    if not separator:
-        raise ValueError("invalid stored identifier")
-    return WorkspaceId(namespace, local_value)
+            return replay.read(transaction.idempotency)

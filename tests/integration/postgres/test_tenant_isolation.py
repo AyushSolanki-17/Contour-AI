@@ -15,7 +15,10 @@ from psycopg import sql
 
 from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
-from contour.infrastructure.postgres.records_transaction import PostgresRecordTransactionManager
+from contour.infrastructure.postgres.job_transaction import PostgresJobTransactionManager
+from contour.infrastructure.postgres.knowledge_transaction import (
+    PostgresKnowledgeTransactionManager,
+)
 from contour.infrastructure.postgres.tables.catalog import (
     evidence,
     source_versions,
@@ -116,7 +119,8 @@ def _admit_catalogs(
 
 
 def _save_entities_and_job(
-    manager: PostgresRecordTransactionManager,
+    knowledge_manager: PostgresKnowledgeTransactionManager,
+    job_manager: PostgresJobTransactionManager,
     first: tuple[Tenant, Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator],
     second: tuple[Tenant, Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator],
 ) -> tuple[Entity, Entity, Job]:
@@ -148,9 +152,11 @@ def _save_entities_and_job(
         "fixture",
         TimePoint.unknown(),
     )
-    with manager.transaction() as transaction:
+    with knowledge_manager.transaction() as transaction:
         transaction.entities.save_entity(_access(first_tenant), first_entity)
         transaction.entities.save_entity(_access(second_tenant), second_entity)
+
+    with job_manager.transaction() as transaction:
         transaction.jobs.save_job(_access(second_tenant), second_job)
     return first_entity, second_entity, second_job
 
@@ -244,7 +250,10 @@ def test_database_rejects_cross_owner_relationship_evidence_and_run_links(
             )
             first, second = _admit_catalogs(PostgresCatalogTransactionManager(engine))
             first_entity, second_entity, second_job = _save_entities_and_job(
-                PostgresRecordTransactionManager(engine), first, second
+                PostgresKnowledgeTransactionManager(engine),
+                PostgresJobTransactionManager(engine),
+                first,
+                second,
             )
             first_tenant, first_workspace, _, _, first_evidence, _ = first
             _, _, _, _, second_evidence, _ = second
@@ -335,7 +344,10 @@ def test_cross_owner_association_failure_rolls_back_prior_writes(
             )
             first, second = _admit_catalogs(PostgresCatalogTransactionManager(engine))
             first_entity, second_entity, _ = _save_entities_and_job(
-                PostgresRecordTransactionManager(engine), first, second
+                PostgresKnowledgeTransactionManager(engine),
+                PostgresJobTransactionManager(engine),
+                first,
+                second,
             )
             first_tenant, first_workspace, _, _, first_evidence, _ = first
             valid = {

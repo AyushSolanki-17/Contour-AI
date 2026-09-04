@@ -516,9 +516,11 @@ Workspace, Source, immutable Version, Evidence, and operation-replay changes.
 Those repositories share one connection only when a catalog workflow requires
 one commit. Knowledge and execution services depend on separate narrow
 transaction contracts, so neither use case can reach repositories owned by the
-other. PostgreSQL currently satisfies both views with one record-transaction
-implementation to share connection, rollback, cleanup, and error translation
-mechanics without exposing the broader implementation to application code.
+other. PostgreSQL provides separate knowledge and job transaction implementations
+that compose only their capability's repositories. They reuse a concrete
+PostgreSQL transaction-scope component for connection, rollback, cleanup, and
+driver-error translation mechanics without exposing the broader implementation
+to application code.
 Neither domain objects nor HTTP routes open transactions, and repository methods
 never commit independently.
 

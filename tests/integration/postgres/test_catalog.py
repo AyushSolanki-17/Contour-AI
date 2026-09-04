@@ -18,7 +18,10 @@ from contour.infrastructure.postgres.catalog_transaction import (
     PostgresCatalogTransactionManager,
 )
 from contour.infrastructure.postgres.engine import create_postgres_engine
-from contour.infrastructure.postgres.records_transaction import PostgresRecordTransactionManager
+from contour.infrastructure.postgres.job_transaction import PostgresJobTransactionManager
+from contour.infrastructure.postgres.knowledge_transaction import (
+    PostgresKnowledgeTransactionManager,
+)
 from contour.infrastructure.postgres.tables.catalog import evidence as evidence_table
 from contour.jobs.application.persistence import JobPersistenceService
 from contour.jobs.domain.job import Job, JobId
@@ -358,26 +361,29 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                 TimePoint.unknown(),
                 "cancelled",
             )
-            record_manager = PostgresRecordTransactionManager(engine)
-            knowledge_service = KnowledgePersistenceService(record_manager)
-            execution_service = JobPersistenceService(record_manager)
+            knowledge_manager = PostgresKnowledgeTransactionManager(engine)
+            job_manager = PostgresJobTransactionManager(engine)
+            knowledge_service = KnowledgePersistenceService(knowledge_manager)
+            execution_service = JobPersistenceService(job_manager)
             knowledge_service.admit_knowledge(
                 access=access, entities=(entity_a, entity_b), relationship=relationship
             )
             execution_service.record(access=access, job=job, runs=(failed_run, cancelled_run))
 
-            with record_manager.transaction() as transaction:
+            with knowledge_manager.transaction() as transaction:
                 assert transaction.entities.get_entity(access, entity_a.id) == entity_a
                 assert (
                     transaction.relationships.get_relationship(access, relationship.id)
                     == relationship
                 )
+
+            with job_manager.transaction() as transaction:
                 assert transaction.jobs.get_job(access, job.id) == job
                 assert transaction.runs.get_run(access, failed_run.id) == failed_run
                 assert transaction.runs.get_run(access, cancelled_run.id) == cancelled_run
 
             with pytest.raises(RecordReferenceError):
-                with record_manager.transaction() as transaction:
+                with job_manager.transaction() as transaction:
                     transaction.jobs.save_job(
                         access,
                         Job(
@@ -399,11 +405,11 @@ def test_knowledge_and_execution_records_preserve_evidence_and_attempts(
                         ),
                     )
 
-            with record_manager.transaction() as transaction:
+            with job_manager.transaction() as transaction:
                 assert transaction.jobs.get_job(access, JobId("JOB", "rolled-back")) is None
 
             with pytest.raises(RecordReferenceError):
-                with record_manager.transaction() as transaction:
+                with knowledge_manager.transaction() as transaction:
                     transaction.relationships.save_relationship(
                         access,
                         Relationship(

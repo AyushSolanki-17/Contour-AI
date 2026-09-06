@@ -2,20 +2,43 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
+from dataclasses import dataclass
+from typing import Protocol
+
 from contour.errors import ResourceNotFoundError
+from contour.knowledge.application.ports import EvidenceRepository
 from contour.knowledge.domain.evidence import EvidenceId, EvidenceLocator
+from contour.sources.application.ports import SourceRepository, SourceVersionRepository
 from contour.sources.domain.source import Source
 from contour.sources.domain.source_version import SourceVersion
-from contour.tenancy.application.catalog_store import CatalogTransactionManager
 from contour.tenancy.domain.access import AccessContext
 from contour.tenancy.domain.tenant import Tenant
+from contour.workspaces.application.ports import WorkspaceRepository
 from contour.workspaces.domain.workspace import Workspace
 
 
-class CatalogAdmissionService:
+@dataclass(frozen=True)
+class SourceAdmissionUnitOfWork:
+    """Repositories for the existing atomic workspace-to-evidence admission."""
+
+    workspaces: WorkspaceRepository
+    sources: SourceRepository
+    source_versions: SourceVersionRepository
+    evidence: EvidenceRepository
+
+
+class SourceAdmissionTransactionManager(Protocol):
+    """Keep workspace, source, version, and evidence admission atomic."""
+
+    def transaction(self) -> AbstractContextManager[SourceAdmissionUnitOfWork]:
+        """Commit the complete admission or discard every write."""
+
+
+class SourceAdmissionService:
     """Admits one coherent workspace, source, version, and exact evidence record."""
 
-    def __init__(self, transactions: CatalogTransactionManager) -> None:
+    def __init__(self, transactions: SourceAdmissionTransactionManager) -> None:
         """Initialize the service with the catalog transaction boundary."""
         self._transactions = transactions
 

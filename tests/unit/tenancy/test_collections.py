@@ -1,4 +1,4 @@
-"""Application contracts for durable catalog collection orchestration."""
+"""Application contracts for durable tenant creation and concurrent replay."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ import json
 
 import pytest
 
-from contour.sources.application.errors import CatalogConflictError, IdempotencyConflictError
+from contour.errors.catalog import CatalogConflictError
+from contour.idempotency import IdempotencyConflictError
 from contour.tenancy.application.collections import TenantCollectionService
 from contour.tenancy.domain.access import Principal, PrincipalId
 

@@ -9,8 +9,7 @@ from sqlalchemy import Engine
 from contour.infrastructure.postgres.job_repository import PostgresJobRepository
 from contour.infrastructure.postgres.run_repository import PostgresRunRepository
 from contour.infrastructure.postgres.transaction_scope import PostgresTransactionScope
-from contour.jobs.application.job_store import JobRepository
-from contour.jobs.application.run_store import RunRepository
+from contour.jobs.application.ports import JobRepository, RunRepository
 
 
 class PostgresJobTransactionManager:

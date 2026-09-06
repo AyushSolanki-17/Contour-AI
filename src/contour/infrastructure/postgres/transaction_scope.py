@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from types import TracebackType
 
-from psycopg.errors import CheckViolation, ForeignKeyViolation, UniqueViolation
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
 from sqlalchemy import Connection, Engine
 from sqlalchemy.engine import RootTransaction
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -14,20 +16,44 @@ from contour.errors import (
     RecordPersistenceError,
     RecordReferenceError,
 )
+from contour.errors.catalog import (
+    CatalogConflictError,
+    CatalogPersistenceError,
+    CatalogReferenceError,
+)
 
 
 class PostgresTransactionScope:
     """Manage one connection and root transaction for a PostgreSQL unit of work."""
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(
+        self,
+        engine: Engine,
+        *,
+        translate_error: Callable[[SQLAlchemyError], Exception] | None = None,
+    ) -> None:
         """Initialize an unopened scope from a process-owned engine.
 
         Args:
             engine: SQLAlchemy engine that owns the connection pool.
+            translate_error: Safe error vocabulary for the consuming operation.
         """
         self._engine = engine
+        self._translate_error = translate_error or _translate_persistence_error
         self._connection: Connection | None = None
         self._transaction: RootTransaction | None = None
+
+    @contextmanager
+    def transaction(self) -> Iterator[Connection]:
+        """Yield one connection; translate failures and always complete its transaction."""
+        connection = self.open()
+        try:
+            yield connection
+        except BaseException as error:
+            self.close(type(error), error, error.__traceback__)
+            raise
+        else:
+            self.close(None, None, None)
 
     def open(self) -> Connection:
         """Checkout a connection and begin its root transaction.
@@ -45,7 +71,7 @@ class PostgresTransactionScope:
         except SQLAlchemyError as error:
             if connection is not None:
                 connection.close()
-            raise RecordPersistenceError() from error
+            raise self._translate_error(error) from error
 
         self._connection = connection
         self._transaction = transaction
@@ -92,7 +118,7 @@ class PostgresTransactionScope:
             exc_value if isinstance(exc_value, SQLAlchemyError) else None
         )
         if persistence_error is not None:
-            raise _translate_persistence_error(persistence_error) from persistence_error
+            raise self._translate_error(persistence_error) from persistence_error
 
     def _clear(self) -> None:
         """Release references after the scope has completed."""
@@ -131,6 +157,13 @@ def _translate_persistence_error(error: SQLAlchemyError) -> Exception:
         return RecordConflictError()
     if isinstance(error, IntegrityError) and isinstance(error.orig, ForeignKeyViolation):
         return RecordReferenceError()
-    if isinstance(error, IntegrityError) and isinstance(error.orig, CheckViolation):
-        return RecordPersistenceError()
     return RecordPersistenceError()
+
+
+def translate_catalog_error(error: SQLAlchemyError) -> Exception:
+    """Preserve catalog wire errors for tenant, workspace, and source transactions."""
+    if isinstance(error, IntegrityError) and isinstance(error.orig, UniqueViolation):
+        return CatalogConflictError()
+    if isinstance(error, IntegrityError) and isinstance(error.orig, ForeignKeyViolation):
+        return CatalogReferenceError()
+    return CatalogPersistenceError()

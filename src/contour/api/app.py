@@ -10,61 +10,32 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from contour import __version__
-from contour.api.authentication import CredentialVerifier
-from contour.api.cursor import CursorCodec
+from contour.api.dependencies import ApiDependencies
 from contour.api.error_handler import register_exception_handlers
-from contour.api.health import HealthService
-from contour.api.routes.catalog import create_catalog_router
-from contour.api.routes.health import create_health_router
-from contour.sources.application.registration import SourceCollectionService
-from contour.tenancy.application.collections import TenantCollectionService
-from contour.workspaces.application.collections import WorkspaceCollectionService
+from contour.api.middleware import RequestContextMiddleware
+from contour.api.routers import create_api_router
 
 type AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
 
 def create_app(
     *,
-    health_service: HealthService,
-    tenant_service: TenantCollectionService | None = None,
-    workspace_service: WorkspaceCollectionService | None = None,
-    source_service: SourceCollectionService | None = None,
-    credential_verifier: CredentialVerifier | None = None,
-    cursor_secret: str = "contract-only-cursor-secret",
+    dependencies: ApiDependencies,
     lifespan: AppLifespan | None = None,
 ) -> FastAPI:
-    """Create the API from explicitly constructed application services.
+    """Create the API from one explicitly constructed dependency bundle.
 
     Args:
-        health_service: Framework-independent health use cases to expose.
-        tenant_service: Optional authenticated tenant collection use cases.
-        workspace_service: Optional verified-tenant workspace collection use cases.
-        source_service: Optional verified-workspace source collection use cases.
-        credential_verifier: Optional bearer-credential adapter for product routes.
-        cursor_secret: Server-side secret used to bind collection cursor tokens.
+        dependencies: Process-scoped application services and delivery adapters.
         lifespan: Optional process-resource lifecycle owned by composition.
 
     Returns:
         A configured FastAPI application.
     """
     app = FastAPI(title="Contour", version=__version__, lifespan=lifespan)
+    app.add_middleware(RequestContextMiddleware)
     register_exception_handlers(app)
-    app.include_router(create_health_router(health_service))
-    if (
-        tenant_service is not None
-        and workspace_service is not None
-        and source_service is not None
-        and credential_verifier is not None
-    ):
-        app.include_router(
-            create_catalog_router(
-                tenant_service,
-                workspace_service,
-                source_service,
-                credential_verifier,
-                CursorCodec(cursor_secret),
-            )
-        )
+    app.include_router(create_api_router(dependencies))
     app.openapi = _openapi_without_framework_validation_errors(app)  # type: ignore[method-assign]
     return app
 

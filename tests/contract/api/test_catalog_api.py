@@ -7,6 +7,8 @@ from typing import cast
 from fastapi.testclient import TestClient
 
 from contour.api.app import create_app
+from contour.api.cursor import CursorCodec
+from contour.api.dependencies import ApiDependencies
 from contour.api.health import HealthService
 from contour.errors import ResourceNotFoundError
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
@@ -125,12 +127,14 @@ def _client(service: _Catalog | None = None) -> tuple[TestClient, _Catalog]:
     """Create an assembled HTTP adapter over deterministic dependencies."""
     catalog = service or _Catalog()
     app = create_app(
-        health_service=HealthService(_Ready()),
-        tenant_service=cast(TenantCollectionService, catalog),
-        workspace_service=cast(WorkspaceCollectionService, catalog),
-        source_service=cast(SourceCollectionService, catalog),
-        credential_verifier=StaticCredentialVerifier({"catalog-token": _PRINCIPAL}),
-        cursor_secret="catalog-contract-secret",
+        dependencies=ApiDependencies(
+            health=HealthService(_Ready()),
+            tenants=cast(TenantCollectionService, catalog),
+            workspaces=cast(WorkspaceCollectionService, catalog),
+            sources=cast(SourceCollectionService, catalog),
+            credentials=StaticCredentialVerifier({"catalog-token": _PRINCIPAL}),
+            cursors=CursorCodec("catalog-contract-secret"),
+        ),
     )
     return TestClient(app), catalog
 

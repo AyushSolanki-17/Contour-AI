@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from contour.errors import ResourceNotFoundError
+from contour.errors.catalog import CatalogConflictError
 from contour.sources.application.artifact_store import ArtifactRepository, ArtifactWriteState
-from contour.sources.application.errors import CatalogConflictError
+from contour.sources.application.ports import SourceTransactionManager
 from contour.sources.domain.acquired_content import AcquiredContent
 from contour.sources.domain.source import Source
 from contour.sources.domain.source_version import SourceVersion, SourceVersionId
-from contour.tenancy.application.catalog_store import CatalogTransactionManager
 from contour.tenancy.domain.access import AccessContext
 from contour.time import TimePoint
 
@@ -29,7 +29,7 @@ class SourcePersistenceService:
     def __init__(
         self,
         artifacts: ArtifactRepository,
-        transactions: CatalogTransactionManager,
+        transactions: SourceTransactionManager,
     ) -> None:
         """Initialize the use case with explicit durable boundaries."""
         self._artifacts = artifacts

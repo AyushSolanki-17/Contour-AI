@@ -39,6 +39,17 @@ def test_liveness_does_not_require_database_availability() -> None:
     assert response.json() == {"status": "live"}
 
 
+def test_http_middleware_propagates_or_generates_correlation_id() -> None:
+    """Every HTTP response carries the request context used by nested services."""
+    client = TestClient(create_http_app(settings(), AvailableProbe()))
+
+    supplied = client.get("/health/live", headers={"X-Correlation-ID": "trace-123"})
+    generated = client.get("/health/live")
+
+    assert supplied.headers["x-correlation-id"] == "trace-123"
+    assert len(generated.headers["x-correlation-id"]) > 0
+
+
 def test_readiness_reports_available_required_dependency() -> None:
     client = TestClient(create_http_app(settings(), AvailableProbe()))
 

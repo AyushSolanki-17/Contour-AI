@@ -8,10 +8,10 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.exc import OperationalError
 
-from contour.infrastructure.postgres.catalog_transaction import (
-    PostgresCatalogTransactionManager,
+from contour.errors.catalog import CatalogPersistenceError
+from contour.infrastructure.postgres.tenant_transaction import (
+    PostgresTenantTransactionManager,
 )
-from contour.sources.application.errors import CatalogPersistenceError
 
 
 def test_connection_failure_does_not_leak_database_details() -> None:
@@ -24,7 +24,7 @@ def test_connection_failure_does_not_leak_database_details() -> None:
     )
 
     with pytest.raises(CatalogPersistenceError) as captured:
-        with PostgresCatalogTransactionManager(engine).transaction():
+        with PostgresTenantTransactionManager(engine).transaction():
             pass
 
     assert captured.value.code == "catalog.persistence_failed"

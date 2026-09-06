@@ -16,12 +16,15 @@ from alembic.config import Config
 from psycopg import sql
 
 from contour.errors import ResourceNotFoundError
+from contour.errors.catalog import CatalogConflictError
 from contour.infrastructure.artifact.filesystem import FileSystemArtifactRepository
-from contour.infrastructure.postgres.catalog_transaction import (
-    PostgresCatalogTransactionManager,
-)
 from contour.infrastructure.postgres.engine import create_postgres_engine
+from contour.infrastructure.postgres.source_admission_transaction import (
+    PostgresSourceAdmissionTransactionManager,
+)
+from contour.infrastructure.postgres.source_transaction import PostgresSourceTransactionManager
 from contour.infrastructure.postgres.tables.catalog import source_versions
+from contour.infrastructure.postgres.tenant_transaction import PostgresTenantTransactionManager
 from contour.infrastructure.source.pep import PepAcquisitionService, PepPreflightService
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
 from contour.settings import DatabaseSettings, Settings
@@ -31,7 +34,6 @@ from contour.sources.application.artifact_errors import (
     ArtifactPersistenceError,
 )
 from contour.sources.application.artifact_store import ArtifactWriteState
-from contour.sources.application.errors import CatalogConflictError
 from contour.sources.application.persistence import SourcePersistenceService
 from contour.sources.domain.acquired_content import AcquiredContent
 from contour.sources.domain.source import Source, SourceId
@@ -121,20 +123,23 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
                     settings.database.port,
                 )
             )
-            manager = PostgresCatalogTransactionManager(engine)
+            manager = PostgresSourceAdmissionTransactionManager(engine)
             tenant = Tenant(TenantId("TENANT", "pep-ingestion"), "PEP ingestion")
             access = _access(tenant)
             workspace = Workspace(
                 WorkspaceId("WORKSPACE", "pep-ingestion"), tenant.id, "PEPs", "maintainer"
             )
             pep_723 = _source(tenant.id, workspace.id, 723)
-            with manager.transaction() as transaction:
+            with PostgresTenantTransactionManager(engine).transaction() as transaction:
                 transaction.tenants.save_tenant(tenant)
+            with manager.transaction() as transaction:
                 transaction.workspaces.save_workspace(access, workspace)
                 transaction.sources.save_source(access, pep_723)
 
             artifact_repository = FileSystemArtifactRepository(tmp_path / "artifacts")
-            service = SourcePersistenceService(artifact_repository, manager)
+            service = SourcePersistenceService(
+                artifact_repository, PostgresSourceTransactionManager(engine)
+            )
             fixture_content = _FIXTURE_PATH.read_bytes()
             acquisition = _acquire(
                 pep_723,
@@ -243,7 +248,7 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             blocked_root = tmp_path / "blocked-artifact-root"
             blocked_root.write_text("not a directory", encoding="utf-8")
             blocked_service = SourcePersistenceService(
-                FileSystemArtifactRepository(blocked_root), manager
+                FileSystemArtifactRepository(blocked_root), PostgresSourceTransactionManager(engine)
             )
             with pytest.raises(ArtifactPersistenceError):
                 blocked_service.persist(access=access, acquired=acquisition_725)

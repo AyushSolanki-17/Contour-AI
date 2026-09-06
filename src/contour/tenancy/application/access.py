@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contour.errors import ResourceNotFoundError
-from contour.tenancy.application.catalog_store import CatalogTransactionManager
+from contour.tenancy.application.ports import TenantTransactionManager
 from contour.tenancy.domain.access import AccessContext, Membership, Principal
 from contour.tenancy.domain.tenant import Tenant, TenantId
 
@@ -11,7 +11,7 @@ from contour.tenancy.domain.tenant import Tenant, TenantId
 class TenantAccessService:
     """Creates tenant memberships and verifies a principal's selected scope."""
 
-    def __init__(self, transactions: CatalogTransactionManager) -> None:
+    def __init__(self, transactions: TenantTransactionManager) -> None:
         """Initialize the service with the identity-capable catalog boundary."""
         self._transactions = transactions
 

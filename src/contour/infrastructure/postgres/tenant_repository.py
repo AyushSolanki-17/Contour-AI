@@ -6,7 +6,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.infrastructure.postgres.tables.catalog import tenants
+from contour.infrastructure.postgres.tables.tenancy import tenants
 from contour.tenancy.domain.tenant import Tenant, TenantId
 
 

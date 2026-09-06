@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-from hashlib import sha256
-from json import dumps
 from uuid import uuid4
 
-from contour.sources.application.errors import CatalogConflictError, IdempotencyConflictError
-from contour.tenancy.application.catalog_store import CatalogTransactionManager
+from contour.errors.catalog import CatalogConflictError
+from contour.idempotency import IdempotencyConflictError, request_digest
 from contour.tenancy.domain.access import AccessContext
 from contour.tenancy.domain.tenant import TenantId
+from contour.workspaces.application.ports import WorkspaceTransactionManager
 from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 
 class WorkspaceCollectionService:
     """Own workspace creation and listing within a previously verified tenant."""
 
-    def __init__(self, transactions: CatalogTransactionManager) -> None:
+    def __init__(self, transactions: WorkspaceTransactionManager) -> None:
         """Bind the catalog transaction boundary used for workspace writes.
 
         Args:
@@ -40,7 +39,7 @@ class WorkspaceCollectionService:
         Raises:
             IdempotencyConflictError: If the key was first used for different input.
         """
-        digest = _payload_digest(name)
+        digest = request_digest({"name": name})
         try:
             with self._transactions.transaction() as transaction:
                 replay = transaction.idempotency.get_result(
@@ -98,18 +97,6 @@ class WorkspaceCollectionService:
                 access.principal, str(access.tenant_id), "workspaces", key
             )
         return None if replay is None else _workspace_from_replay(replay, digest)
-
-
-def _payload_digest(name: str) -> str:
-    """Create the stable workspace-request digest used for replay comparison.
-
-    Args:
-        name: Validated workspace name supplied by the client.
-
-    Returns:
-        SHA-256 digest over canonical JSON input.
-    """
-    return sha256(dumps({"name": name}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def _workspace_result(workspace: Workspace) -> dict[str, str | None]:

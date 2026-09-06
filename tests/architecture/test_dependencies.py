@@ -20,61 +20,60 @@ from contour.infrastructure.postgres.tables.knowledge import (
 )
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "contour"
-_FORBIDDEN_IMPORTS_BY_LAYER = {
-    "domain": (
-        "contour.api",
-        "contour.composition",
-        "contour.infrastructure",
-        "contour.observability",
-        "contour.repositories",
-        "contour.services",
-        "contour.settings",
-        "fastapi",
-        "psycopg",
-        "pydantic",
-        "sqlalchemy",
-    ),
-    "repositories": (
-        "contour.api",
-        "contour.composition",
-        "contour.infrastructure",
-        "contour.observability",
-        "contour.services",
-        "contour.settings",
-        "fastapi",
-        "psycopg",
-        "pydantic",
-        "sqlalchemy",
-    ),
-    "services": (
-        "contour.api",
-        "contour.composition",
-        "contour.infrastructure",
-        "contour.observability",
-        "contour.settings",
-        "fastapi",
-        "psycopg",
-        "pydantic",
-        "sqlalchemy",
-    ),
-    "infrastructure": (
-        "contour.api",
-        "contour.composition",
-    ),
-    "api": (
-        "contour.composition",
-        "contour.infrastructure",
-        "contour.repositories",
-    ),
-    "observability": (
-        "contour.api",
-        "contour.composition",
-        "contour.domain",
-        "contour.infrastructure",
-        "contour.repositories",
-        "contour.services",
-    ),
-}
+_CAPABILITIES = frozenset(
+    path.name
+    for path in _PACKAGE_ROOT.iterdir()
+    if (path / "domain").is_dir() and (path / "application").is_dir()
+)
+_CORE_EXTERNAL_FORBIDDEN = (
+    "contour.api",
+    "contour.composition",
+    "contour.infrastructure",
+    "contour.observability",
+    "contour.settings",
+    "fastapi",
+    "psycopg",
+    "pydantic",
+    "sqlalchemy",
+)
+
+
+def _dependency_violation(relative: Path, imported: str) -> bool:
+    """Evaluate capability boundaries without relying on obsolete global paths."""
+    parts = relative.parts
+    owner = parts[0]
+    target = imported.split(".")
+    capability = target[1] if len(target) > 1 and target[0] == "contour" else None
+    domain = owner in _CAPABILITIES and len(parts) > 1 and parts[1] == "domain"
+    application = owner in _CAPABILITIES and len(parts) > 1 and parts[1] == "application"
+    if domain:
+        if imported.startswith(
+            _CORE_EXTERNAL_FORBIDDEN + ("contour.workflows", "contour.idempotency")
+        ):
+            return True
+        return capability in _CAPABILITIES and (len(target) < 3 or target[2] != "domain")
+    if application or owner == "workflows":
+        if imported.startswith(_CORE_EXTERNAL_FORBIDDEN):
+            return True
+        if application and imported.startswith("contour.workflows"):
+            return True
+        if application and capability in _CAPABILITIES and capability != owner:
+            return len(target) < 3 or target[2] != "domain"
+        return False
+    if owner == "api":
+        return (
+            imported.startswith(("contour.infrastructure", "contour.composition"))
+            or (capability in _CAPABILITIES and ".application.ports" in imported)
+            or imported.startswith("contour.idempotency.IdempotencyRepository")
+        )
+    if owner == "infrastructure":
+        return imported.startswith(("contour.api", "contour.composition"))
+    if owner == "observability" or relative.name == "settings.py":
+        return capability in _CAPABILITIES or imported.startswith(
+            ("contour.api", "contour.workflows", "contour.infrastructure", "contour.composition")
+        )
+    return False
+
 
 _AMBIGUOUS_MODULE_NAMES = {
     "common",
@@ -85,16 +84,39 @@ _AMBIGUOUS_MODULE_NAMES = {
 }
 
 
-def test_layers_follow_the_conventional_dependency_direction() -> None:
-    """Domain, repository ports, and services stay reusable outside delivery and storage."""
-    violations: list[str] = []
-    for layer, forbidden_prefixes in _FORBIDDEN_IMPORTS_BY_LAYER.items():
-        for path in sorted((_PACKAGE_ROOT / layer).rglob("*.py")):
-            for imported_name in _imported_names(path):
-                if imported_name.startswith(forbidden_prefixes):
-                    violations.append(f"{path.relative_to(_PACKAGE_ROOT)} imports {imported_name}")
-
+def test_layers_follow_the_capability_dependency_direction() -> None:
+    """Check every capability and explicit cross-capability workflow."""
+    violations = []
+    for path in sorted(_PACKAGE_ROOT.rglob("*.py")):
+        relative = path.relative_to(_PACKAGE_ROOT)
+        for imported in _imported_names(path):
+            if _dependency_violation(relative, imported):
+                violations.append(f"{relative} imports {imported}")
     assert violations == []
+
+
+def test_boundary_policy_rejects_realistic_bypasses() -> None:
+    """Guard against the former vacuous checks of deleted global directories."""
+    forbidden = (
+        ("sources/domain/source.py", "contour.api.schemas.v1.sources"),
+        ("sources/domain/source.py", "contour.jobs.JobPersistenceService"),
+        ("sources/domain/source.py", "contour.sources.application.ports"),
+        ("sources/application/registration.py", "sqlalchemy.select"),
+        ("sources/application/registration.py", "contour.tenancy.application.collections"),
+        ("sources/application/ports.py", "contour.workflows.source_admission"),
+        ("api/routers/v1/sources.py", "contour.infrastructure.postgres.source_repository"),
+        ("api/routers/v1/sources.py", "contour.sources.application.ports.SourceRepository"),
+        ("infrastructure/postgres/source_repository.py", "contour.api.schemas.v1.sources"),
+    )
+    allowed = (
+        ("sources/application/ports.py", "contour.workspaces.domain.workspace"),
+        ("sources/domain/source.py", "contour.tenancy.domain.tenant"),
+        ("workflows/source_admission.py", "contour.knowledge.application.ports"),
+        ("composition/http.py", "contour.infrastructure.postgres.source_transaction"),
+        ("api/routers/v1/sources.py", "contour.sources.application.registration"),
+    )
+    assert all(_dependency_violation(Path(path), name) for path, name in forbidden)
+    assert not any(_dependency_violation(Path(path), name) for path, name in allowed)
 
 
 def test_production_modules_do_not_use_ambiguous_catchall_names() -> None:
@@ -260,12 +282,15 @@ def test_source_registration_uniqueness_is_a_database_invariant() -> None:
 
 
 def _imported_names(path: Path) -> tuple[str, ...]:
-    """Return absolute names referenced by import statements in one module."""
+    """Resolve imports including from-package and relative-module bypasses."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     names: list[str] = []
+    package = ("contour", *path.relative_to(_PACKAGE_ROOT).parent.parts)
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module is not None:
-            names.append(node.module)
+        elif isinstance(node, ast.ImportFrom):
+            prefix = ".".join(package[: len(package) - node.level + 1]) if node.level else ""
+            module = ".".join(part for part in (prefix, node.module) if part)
+            names.extend(f"{module}.{alias.name}" for alias in node.names)
     return tuple(names)

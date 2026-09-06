@@ -69,16 +69,18 @@ class PepHtmlNormalizer:
             raise PepNormalizationError("malformed HTML") from error
         if parser.title is None or parser.summary is None:
             raise PepNormalizationError("required PEP fields are absent")
-        title = _raw_locator(raw_content, parser.title, "header:title")
-        summary = _raw_locator(raw_content, parser.summary, "content:summary")
+        title = _raw_locator(raw_content, parser.title, "header:title", "h1")
+        summary = _raw_locator(raw_content, parser.summary, "content:summary", "p")
         content = f"title: {parser.title}\nsummary: {parser.summary}\n".encode()
         return NormalizedContent(version.id, self.transformation, content, (title, summary))
 
 
-def _raw_locator(raw_content: bytes, value: str, name: str) -> NormalizedLocator:
-    """Locate one parsed UTF-8 value in exact raw bytes or fail explicitly."""
+def _raw_locator(raw_content: bytes, value: str, name: str, tag: str) -> NormalizedLocator:
+    """Locate a parsed field inside its expected raw HTML element or fail explicitly."""
     encoded = value.encode("utf-8")
-    start = raw_content.find(encoded)
+    open_tag = raw_content.find(f"<{tag}".encode("ascii"))
+    close_tag = raw_content.find(f"</{tag}>".encode("ascii"), open_tag)
+    start = raw_content.find(encoded, open_tag, close_tag)
     if start < 0:
         raise PepNormalizationError("normalized value lost its raw locator")
     return NormalizedLocator(name, start, start + len(encoded))

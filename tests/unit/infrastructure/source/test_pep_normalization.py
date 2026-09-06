@@ -10,6 +10,7 @@ import pytest
 
 from contour.infrastructure.artifact.filesystem import FileSystemArtifactRepository
 from contour.infrastructure.source.pep_normalizer import PepHtmlNormalizer, PepNormalizationError
+from contour.sources.application.artifact_errors import ArtifactIntegrityError
 from contour.sources.application.normalization import SourceNormalizationService
 from contour.sources.domain.source import SourceId
 from contour.sources.domain.source_version import ContentDigest, SourceVersion, SourceVersionId
@@ -41,9 +42,8 @@ def test_normalization_is_deterministic_and_preserves_exact_raw_locators(tmp_pat
     """The normalized artifact records stable derivation and raw-byte spans."""
     raw = _FIXTURE.read_bytes()
     version = _version(raw)
-    service = SourceNormalizationService(
-        FileSystemArtifactRepository(tmp_path), PepHtmlNormalizer()
-    )
+    artifacts = FileSystemArtifactRepository(tmp_path)
+    service = SourceNormalizationService(artifacts, PepHtmlNormalizer())
 
     first = service.normalize(version, raw)
     repeated = service.normalize(version, raw)
@@ -60,6 +60,13 @@ def test_normalization_is_deterministic_and_preserves_exact_raw_locators(tmp_pat
         assert (
             raw[locator.raw_start : locator.raw_end].decode() in first.normalized.content.decode()
         )
+    assert (
+        raw[first.normalized.locators[0].raw_start : first.normalized.locators[0].raw_end]
+        == b"PEP 723"
+    )
+    artifacts.artifact_path(first.artifact_digest).write_bytes(b"corrupt normalized artifact")
+    with pytest.raises(ArtifactIntegrityError):
+        artifacts.retrieve(first.artifact_digest)
 
 
 @pytest.mark.parametrize(

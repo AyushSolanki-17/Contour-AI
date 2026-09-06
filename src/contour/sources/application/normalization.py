@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from base64 import b64encode
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Protocol
@@ -53,7 +54,7 @@ class SourceNormalizationService:
 def _manifest_bytes(normalized: NormalizedContent) -> bytes:
     """Serialize derivation, normalized bytes, and exact locators canonically."""
     payload = {
-        "content": normalized.content.decode("utf-8"),
+        "content_base64": b64encode(normalized.content).decode("ascii"),
         "locators": [locator.to_primitive() for locator in normalized.locators],
         "source_version_id": str(normalized.source_version_id),
         "transformation": normalized.transformation,

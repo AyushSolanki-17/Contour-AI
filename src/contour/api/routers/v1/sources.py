@@ -12,7 +12,7 @@ from contour.api.request_scope import tenant_id as parse_tenant_id
 from contour.api.request_scope import workspace_id as parse_workspace_id
 from contour.api.schemas.error import ErrorResponse
 from contour.api.schemas.v1.sources import SourceCreateRequest, SourcePage, SourceResponse
-from contour.sources.application.registration import SourceCollectionService
+from contour.sources.application.collections import SourceCollectionService
 from contour.sources.domain.source import Source
 from contour.tenancy.application.collections import TenantCollectionService
 from contour.tenancy.domain.access import Principal

@@ -21,6 +21,11 @@ Before non-trivial implementation, use the
 to place the change, decide whether an architectural boundary actually needs to
 move, and define the bounded verification plan.
 
+Developers coming from a global layer-first layout can use the
+[layer-first architecture mapping](development/layered-layout-mapping.md) to
+map familiar resources, services, repositories, and bootstrap code to
+Contour's capability-first topology.
+
 Repository-wide instructions for coding agents live in [AGENTS.md](../AGENTS.md).
 
 ## Executing the roadmap

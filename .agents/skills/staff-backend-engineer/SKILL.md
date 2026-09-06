@@ -85,6 +85,26 @@ the replaced path; and add the smallest executable fitness check that prevents
 regression. Do not preserve a temporary second vocabulary or keep refactoring
 after the stated contract and invariants are satisfied.
 
+### Contour capability-first architecture
+
+For Contour, treat `docs/project-scope.md`, `docs/architecture/backend.md`,
+and `docs/architecture/knowledge-model.md` as the current architecture, not
+the generic layouts in this skill. Production behavior is organized as
+`contour/<capability>/{domain,application}` with source-neutral use cases and
+behavior-focused ports in `application/`, and concrete external I/O under
+`infrastructure/`. HTTP parsing and response translation belong in `api/`;
+executable dependency construction and process-resource lifetime belong in
+`composition/<executable>.py`.
+
+Within an application package, choose the module name from the service's owned
+operation family: `collections.py` for `*CollectionService`, `access.py` for
+`*AccessService`, and `persistence.py` for `*PersistenceService`; keep its
+ports in `ports.py`. The capability directory supplies the business subject, so
+avoid redundant capability prefixes. When a rename is justified, update every
+import, test, architecture check, composition root, and owning architecture
+documentation in one change; delete the old internal path instead of preserving
+a compatibility alias.
+
 ## Design and implementation
 
 - Preserve established boundaries. Keep domain and application policy separate

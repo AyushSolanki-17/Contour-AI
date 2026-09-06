@@ -22,7 +22,7 @@ from contour.infrastructure.postgres.workspace_transaction import (
 )
 from contour.observability.logging import configure_logging
 from contour.settings import Settings
-from contour.sources.application.registration import SourceCollectionService
+from contour.sources.application.collections import SourceCollectionService
 from contour.tenancy.application.collections import TenantCollectionService
 from contour.tenancy.domain.access import Principal, PrincipalId
 from contour.workspaces.application.collections import WorkspaceCollectionService

@@ -124,7 +124,7 @@ src/contour/
   sources/
     domain/                       sources, immutable versions and exact acquired bytes
     application/
-      registration.py             registration, listing and private replay reconstruction
+      collections.py              workspace-scoped registration, listing and private replay reconstruction
       persistence.py              artifact-first immutable version admission
       ports.py                    source/version repositories, workspace lookup and transaction
       artifact_store.py           exact content-addressed artifact contract
@@ -179,6 +179,15 @@ needs; concrete adapters implement those protocols directly. Small repository
 protocols live together in the capability's `ports.py`, rather than being
 forwarded through separate store modules. Artifact storage remains separate
 because its integrity and lifetime differ from a PostgreSQL transaction.
+
+Within a capability's `application/` package, name a use-case module for the
+operation family its service owns. A `*CollectionService` belongs in
+`collections.py`; an `*AccessService` belongs in `access.py`; and a
+`*PersistenceService` belongs in `persistence.py`. `ports.py` remains the sole
+home for the capability's behavior-focused protocols. The capability directory
+supplies the subject, so do not repeat it in every module name. Rename callers,
+tests, documentation, and architecture checks together; do not retain
+compatibility imports for replaced internal module names.
 
 ### Architecture stability and change admission
 

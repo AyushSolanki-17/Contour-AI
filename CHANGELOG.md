@@ -12,6 +12,10 @@ date without rewriting what was actually delivered.
 
 ### Changed
 
+- Source collection operations now use the same capability-local
+  `application/collections.py` vocabulary as Tenant and Workspace collections.
+  Internal imports, architecture checks, and developer guidance use the single
+  path; public HTTP behavior is unchanged.
 - Product routes and schemas are grouped by Tenant, Workspace, and Source.
   Capability-specific transaction contracts replace the tenancy-owned catalog
   transaction, with explicit atomic source admission and executable dependency

@@ -101,8 +101,8 @@ def test_boundary_policy_rejects_realistic_bypasses() -> None:
         ("sources/domain/source.py", "contour.api.schemas.v1.sources"),
         ("sources/domain/source.py", "contour.jobs.JobPersistenceService"),
         ("sources/domain/source.py", "contour.sources.application.ports"),
-        ("sources/application/registration.py", "sqlalchemy.select"),
-        ("sources/application/registration.py", "contour.tenancy.application.collections"),
+        ("sources/application/collections.py", "sqlalchemy.select"),
+        ("sources/application/collections.py", "contour.tenancy.application.collections"),
         ("sources/application/ports.py", "contour.workflows.source_admission"),
         ("api/routers/v1/sources.py", "contour.infrastructure.postgres.source_repository"),
         ("api/routers/v1/sources.py", "contour.sources.application.ports.SourceRepository"),
@@ -113,7 +113,7 @@ def test_boundary_policy_rejects_realistic_bypasses() -> None:
         ("sources/domain/source.py", "contour.tenancy.domain.tenant"),
         ("workflows/source_admission.py", "contour.knowledge.application.ports"),
         ("composition/http.py", "contour.infrastructure.postgres.source_transaction"),
-        ("api/routers/v1/sources.py", "contour.sources.application.registration"),
+        ("api/routers/v1/sources.py", "contour.sources.application.collections"),
     )
     assert all(_dependency_violation(Path(path), name) for path, name in forbidden)
     assert not any(_dependency_violation(Path(path), name) for path, name in allowed)
@@ -138,11 +138,12 @@ def test_catalog_collection_use_cases_remain_capability_named() -> None:
     expected_paths = {
         "tenancy/application/collections.py",
         "workspaces/application/collections.py",
-        "sources/application/registration.py",
+        "sources/application/collections.py",
     }
 
     assert all((_PACKAGE_ROOT / path).is_file() for path in expected_paths)
     assert not (_PACKAGE_ROOT / "sources/application/catalog_collections.py").exists()
+    assert not (_PACKAGE_ROOT / "sources/application/registration.py").exists()
 
 
 def test_record_transactions_remain_capability_scoped() -> None:

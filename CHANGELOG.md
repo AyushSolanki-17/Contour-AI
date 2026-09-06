@@ -10,6 +10,19 @@ date without rewriting what was actually delivered.
 
 ## Unreleased
 
+### Changed
+
+- Product routes and schemas are grouped by Tenant, Workspace, and Source.
+  Capability-specific transaction contracts replace the tenancy-owned catalog
+  transaction, with explicit atomic source admission and executable dependency
+  checks for the actual capability layout. HTTP and database contracts remain
+  unchanged.
+- FastAPI assembly now uses one immutable HTTP dependency bundle and a central
+  route registry. A lightweight request middleware propagates correlation IDs
+  without constructing services or buffering request bodies per request.
+- Versioned HTTP routers and schemas now live under `api/routers/v1/` and
+  `api/schemas/v1/`; health and shared transport concerns remain version-neutral.
+
 ### Fixed
 
 - Concurrent identical catalog requests now replay the committed idempotent

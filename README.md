@@ -16,13 +16,16 @@ User-interface applications and other independently deployable components live i
 
 Contour is in early development. The project scope, backend architecture, knowledge model, development roadmap, and testing standard live in the [engineering documentation](docs/README.md). API reference and operational guidance will be added alongside the code they describe.
 
-The Python package uses conventional layer names with strict ownership:
-`api/` contains FastAPI routes and Pydantic schemas. Business
+The Python package is organized by business capability:
+`api/` contains FastAPI routers and Pydantic schemas. Business
 capabilities own their domain concepts and application use cases under
 `tenancy/`, `workspaces/`, `sources/`, `knowledge/`, and `jobs/`; their
 persistence contracts live with their consuming capability. `infrastructure/`
 contains PostgreSQL and other external-system implementations. Alembic migrations remain
-separate from runtime schema declarations.
+separate from runtime schema declarations. Product routes and wire schemas are
+resource-named under `api/routers/v1/` and `api/schemas/v1/`. Cross-capability atomic
+admission lives in `workflows/source_admission.py`; concrete dependencies are
+wired in `composition/http.py`.
 
 Non-trivial changes begin with the
 [feature startup and architecture stability protocol](docs/development/feature-startup.md).

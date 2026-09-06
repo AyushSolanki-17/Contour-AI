@@ -94,3 +94,24 @@ def _base64(value: bytes) -> str:
 def _unbase64(value: str) -> bytes:
     """Decode an unpadded URL-safe base64 component."""
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def page[T](
+    items: tuple[T, ...], cursor: str | None, limit: int, scope: CursorScope, cursors: CursorCodec
+) -> tuple[tuple[T, ...], str | None]:
+    """Return one deterministic cursor page from identity-ordered collection records."""
+    start = 0
+    if cursor is not None:
+        after = cursors.decode(cursor, scope)
+        identities = [str(getattr(item, "id")) for item in items]
+        try:
+            start = identities.index(after) + 1
+        except ValueError as error:
+            raise ResourceNotFoundError() from error
+    page = items[start : start + limit]
+    next_cursor = (
+        cursors.encode(scope, str(getattr(page[-1], "id")))
+        if start + len(page) < len(items)
+        else None
+    )
+    return page, next_cursor

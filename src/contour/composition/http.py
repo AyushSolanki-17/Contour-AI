@@ -9,11 +9,17 @@ from fastapi import FastAPI
 from sqlalchemy import Engine
 
 from contour.api.app import AppLifespan, create_app
+from contour.api.cursor import CursorCodec
+from contour.api.dependencies import ApiDependencies
 from contour.api.health import HealthService, ReadinessProbe
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
-from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.readiness import PostgresReadinessProbe
+from contour.infrastructure.postgres.source_transaction import PostgresSourceTransactionManager
+from contour.infrastructure.postgres.tenant_transaction import PostgresTenantTransactionManager
+from contour.infrastructure.postgres.workspace_transaction import (
+    PostgresWorkspaceTransactionManager,
+)
 from contour.observability.logging import configure_logging
 from contour.settings import Settings
 from contour.sources.application.registration import SourceCollectionService
@@ -39,15 +45,18 @@ def create_http_app(
     engine = create_postgres_engine(settings.database)
     probe = readiness_probe or PostgresReadinessProbe(engine)
     health_service = HealthService(probe)
-    transactions = PostgresCatalogTransactionManager(engine)
     verifier = StaticCredentialVerifier(_configured_principals(settings.demo_credentials))
     return create_app(
-        health_service=health_service,
-        tenant_service=TenantCollectionService(transactions),
-        workspace_service=WorkspaceCollectionService(transactions),
-        source_service=SourceCollectionService(transactions, frozenset({"pep"})),
-        credential_verifier=verifier,
-        cursor_secret=settings.cursor_signing_secret,
+        dependencies=ApiDependencies(
+            health=health_service,
+            tenants=TenantCollectionService(PostgresTenantTransactionManager(engine)),
+            workspaces=WorkspaceCollectionService(PostgresWorkspaceTransactionManager(engine)),
+            sources=SourceCollectionService(
+                PostgresSourceTransactionManager(engine), frozenset({"pep"})
+            ),
+            credentials=verifier,
+            cursors=CursorCodec(settings.cursor_signing_secret),
+        ),
         lifespan=_database_lifespan(engine),
     )
 

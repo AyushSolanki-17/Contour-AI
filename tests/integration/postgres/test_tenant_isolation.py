@@ -13,31 +13,34 @@ from alembic import command
 from alembic.config import Config
 from psycopg import sql
 
-from contour.infrastructure.postgres.catalog_transaction import PostgresCatalogTransactionManager
 from contour.infrastructure.postgres.engine import create_postgres_engine
 from contour.infrastructure.postgres.job_transaction import PostgresJobTransactionManager
 from contour.infrastructure.postgres.knowledge_transaction import (
     PostgresKnowledgeTransactionManager,
 )
+from contour.infrastructure.postgres.source_admission_transaction import (
+    PostgresSourceAdmissionTransactionManager,
+)
 from contour.infrastructure.postgres.tables.catalog import (
     evidence,
     source_versions,
     sources,
-    tenants,
     workspaces,
 )
 from contour.infrastructure.postgres.tables.execution import runs
 from contour.infrastructure.postgres.tables.knowledge import entity_evidence, relationships
+from contour.infrastructure.postgres.tables.tenancy import tenants
+from contour.infrastructure.postgres.tenant_transaction import PostgresTenantTransactionManager
 from contour.jobs.domain.job import Job, JobId
 from contour.knowledge.domain.entity import Entity, EntityId
 from contour.knowledge.domain.evidence import EvidenceId, EvidenceLocator
 from contour.settings import DatabaseSettings, Settings
-from contour.sources.application.admission import CatalogAdmissionService
 from contour.sources.domain.source import Source, SourceId
 from contour.sources.domain.source_version import ContentDigest, SourceVersion, SourceVersionId
 from contour.tenancy.domain.access import AccessContext, Membership, Principal, PrincipalId
 from contour.tenancy.domain.tenant import Tenant, TenantId
 from contour.time import TimePoint
+from contour.workflows.source_admission import SourceAdmissionService
 from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -93,7 +96,7 @@ def _access(tenant: Tenant) -> AccessContext:
 
 
 def _admit_catalogs(
-    manager: PostgresCatalogTransactionManager,
+    engine: sa.Engine,
 ) -> tuple[
     tuple[Tenant, Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator],
     tuple[Tenant, Workspace, Source, SourceVersion, EvidenceId, EvidenceLocator],
@@ -101,10 +104,10 @@ def _admit_catalogs(
     """Persist two independent tenant-owned catalog chains."""
     first = _catalog_record("a")
     second = _catalog_record("b")
-    service = CatalogAdmissionService(manager)
+    service = SourceAdmissionService(PostgresSourceAdmissionTransactionManager(engine))
     for tenant, workspace, source, version, evidence_id, locator in (first, second):
         access = _access(tenant)
-        with manager.transaction() as transaction:
+        with PostgresTenantTransactionManager(engine).transaction() as transaction:
             transaction.tenants.save_tenant(tenant)
         service.admit(
             access=access,
@@ -186,7 +189,7 @@ def test_tenant_ownership_propagates_through_all_durable_records(
                     settings.database.port,
                 )
             )
-            first, _ = _admit_catalogs(PostgresCatalogTransactionManager(engine))
+            first, _ = _admit_catalogs(engine)
             tenant, workspace, _, _, _, _ = first
             with engine.connect() as connection:
                 assert connection.execute(
@@ -248,7 +251,7 @@ def test_database_rejects_cross_owner_relationship_evidence_and_run_links(
                     settings.database.port,
                 )
             )
-            first, second = _admit_catalogs(PostgresCatalogTransactionManager(engine))
+            first, second = _admit_catalogs(engine)
             first_entity, second_entity, second_job = _save_entities_and_job(
                 PostgresKnowledgeTransactionManager(engine),
                 PostgresJobTransactionManager(engine),
@@ -342,7 +345,7 @@ def test_cross_owner_association_failure_rolls_back_prior_writes(
                     settings.database.port,
                 )
             )
-            first, second = _admit_catalogs(PostgresCatalogTransactionManager(engine))
+            first, second = _admit_catalogs(engine)
             first_entity, second_entity, _ = _save_entities_and_job(
                 PostgresKnowledgeTransactionManager(engine),
                 PostgresJobTransactionManager(engine),

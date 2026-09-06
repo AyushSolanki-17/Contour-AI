@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from typing import Protocol
 
+from contour.idempotency import IdempotencyRepository
 from contour.tenancy.domain.access import AccessContext
 from contour.workspaces.domain.workspace import Workspace, WorkspaceId
 
@@ -19,3 +22,18 @@ class WorkspaceRepository(Protocol):
 
     def save_workspace(self, access: AccessContext, workspace: Workspace) -> None:
         """Persist a new workspace or reject a conflicting identity."""
+
+
+@dataclass(frozen=True)
+class WorkspaceUnitOfWork:
+    """Repositories sharing one transaction for workspaces operations."""
+
+    workspaces: WorkspaceRepository
+    idempotency: IdempotencyRepository
+
+
+class WorkspaceTransactionManager(Protocol):
+    """Open an atomic workspaces operation, including its durable replay record."""
+
+    def transaction(self) -> AbstractContextManager[WorkspaceUnitOfWork]:
+        """Commit on success and roll back all writes on failure."""

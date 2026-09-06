@@ -6,7 +6,7 @@ from typing import cast
 
 from sqlalchemy import Connection, insert, select
 
-from contour.infrastructure.postgres.tables.catalog import idempotency_records
+from contour.infrastructure.postgres.tables.tenancy import idempotency_records
 from contour.tenancy.domain.access import Principal
 
 

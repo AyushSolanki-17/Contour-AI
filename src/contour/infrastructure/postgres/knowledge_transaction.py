@@ -9,8 +9,7 @@ from sqlalchemy import Engine
 from contour.infrastructure.postgres.entity_repository import PostgresEntityRepository
 from contour.infrastructure.postgres.relationship_repository import PostgresRelationshipRepository
 from contour.infrastructure.postgres.transaction_scope import PostgresTransactionScope
-from contour.knowledge.application.entity_store import EntityRepository
-from contour.knowledge.application.relationship_store import RelationshipRepository
+from contour.knowledge.application.ports import EntityRepository, RelationshipRepository
 
 
 class PostgresKnowledgeTransactionManager:

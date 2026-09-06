@@ -35,9 +35,9 @@ small and obvious.
 
 | Responsibility | Owner |
 |---|---|
-| Business identity, state transition, or invariant | `domain/<concept>.py` |
-| Transport-neutral use case, sequencing, policy, or safe application error | `services/<capability>.py` or a capability subpackage after real growth |
-| Persistence behavior required by a use case | `repositories/<capability>.py` or an existing capability-specific port |
+| Business identity, state transition, or invariant | `<capability>/domain/<concept>.py` |
+| Transport-neutral use case, sequencing, policy, or safe application error | `<capability>/application/<use_case>.py`; explicit cross-capability atomic workflows under `workflows/` |
+| Persistence behavior required by a use case | `<capability>/application/ports.py` or an existing behavior-specific port |
 | PostgreSQL query, row mapping, constraint, or transaction implementation | `infrastructure/postgres/` |
 | Artifact, source, authentication, or provider implementation | `infrastructure/<technology-or-capability>/` |
 | HTTP parsing, authentication extraction, schema, cursor, response, or status mapping | `api/` |
@@ -47,7 +47,42 @@ small and obvious.
 
 HTTP, a future CLI, workers, and scheduled jobs are peer delivery adapters.
 They call services directly and never call one another. PostgreSQL and provider
-implementations satisfy ports and are constructed only by bootstrap code.
+implementations satisfy ports and are constructed only by composition code.
+
+## Adding a route, use case, or connector
+
+For an admitted source-refresh endpoint, put the route in
+`api/routers/v1/sources.py` and any new request/response schema in
+`api/schemas/v1/sources.py`. The existing router receives source and tenant use
+cases explicitly. Add the source-refresh use case under `sources/application/`,
+extending an existing cohesive module when appropriate. Receive verified access,
+keep source policy there, and add only required persistence behavior to
+`sources/application/ports.py`. Implement Core queries in the existing source
+repository or a new concept-owned adapter if it has an independent reason to
+change. Wire dependencies in `composition/http.py`. There is no registration
+framework to learn and no refresh behavior is implemented merely by this example.
+
+Extend HTTP contract tests for input, output and errors, source unit tests for
+new policy, and PostgreSQL integration tests for changed atomicity or
+constraints. Run `make openapi` and `make openapi-check` for intentional
+public contract changes. Current collection routes expose creation and listing;
+this organization does not add item lookup, refresh, or execution APIs.
+
+A new tenant endpoint follows the same path in `api/routers/v1/tenants.py`,
+`api/schemas/v1/tenants.py` and `tenancy/application/`. A new capability starts
+with its actual domain and use case, not empty folders or generic CRUD classes.
+Add ports only for required I/O or consistency boundaries. Architecture checks
+discover capability domain/application directories automatically.
+
+A new source connector belongs under `infrastructure/source/`. Keep native
+configuration, validation, acquisition and provider-error translation together
+while they form one cohesive adapter. Return the existing source-neutral
+`AcquiredContent` value and reuse `SourcePersistenceService` for artifact-first
+admission. Add a pinned offline conformance fixture and explicit composition
+when that connector becomes an executable path. PEP preflight currently expects
+native `SOURCE:PEP` identities, while HTTP registration uses opaque IDs;
+registration-to-acquisition orchestration is still planned work and must define
+that mapping before claiming an end-to-end ingestion endpoint.
 
 ## Architecture-change admission gate
 

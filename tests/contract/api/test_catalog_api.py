@@ -12,8 +12,8 @@ from contour.api.dependencies import ApiDependencies
 from contour.api.health import HealthService
 from contour.errors import ResourceNotFoundError
 from contour.infrastructure.authentication.static_credentials import StaticCredentialVerifier
+from contour.sources.application.collections import SourceCollectionService
 from contour.sources.application.errors import UnsupportedConnectorError
-from contour.sources.application.registration import SourceCollectionService
 from contour.sources.domain.source import Source, SourceId
 from contour.tenancy.application.collections import TenantCollectionService
 from contour.tenancy.domain.access import AccessContext, Membership, Principal, PrincipalId

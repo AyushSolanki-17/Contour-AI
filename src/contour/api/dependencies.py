@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from contour.api.authentication import CredentialVerifier
 from contour.api.cursor import CursorCodec
 from contour.api.health import HealthService
-from contour.sources.application.registration import SourceCollectionService
+from contour.sources.application.collections import SourceCollectionService
 from contour.tenancy.application.collections import TenantCollectionService
 from contour.workspaces.application.collections import WorkspaceCollectionService
 

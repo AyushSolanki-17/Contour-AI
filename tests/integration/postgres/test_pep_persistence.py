@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -27,6 +28,7 @@ from contour.infrastructure.postgres.tables.catalog import source_versions
 from contour.infrastructure.postgres.tenant_transaction import PostgresTenantTransactionManager
 from contour.infrastructure.source.pep import PepAcquisitionService, PepPreflightService
 from contour.infrastructure.source.pep_fixture import PepFixtureSourceAdapter, PinnedPepFixture
+from contour.infrastructure.source.pep_normalizer import PepHtmlNormalizer
 from contour.settings import DatabaseSettings, Settings
 from contour.sources.application.artifact_errors import (
     ArtifactIntegrityError,
@@ -34,6 +36,7 @@ from contour.sources.application.artifact_errors import (
     ArtifactPersistenceError,
 )
 from contour.sources.application.artifact_store import ArtifactWriteState
+from contour.sources.application.normalization import SourceNormalizationService
 from contour.sources.application.persistence import SourcePersistenceService
 from contour.sources.domain.acquired_content import AcquiredContent
 from contour.sources.domain.source import Source, SourceId
@@ -162,6 +165,14 @@ def test_pep_bytes_and_manifest_are_idempotent_immutable_and_recoverable(
             assert first.version.source_id == pep_723.id
             assert first.version.content_digest == acquisition.content_digest
             assert artifact_repository.retrieve(acquisition.content_digest) == fixture_content
+            normalized = SourceNormalizationService(
+                artifact_repository, PepHtmlNormalizer()
+            ).normalize(first.version, fixture_content)
+            normalized_manifest = json.loads(
+                artifact_repository.retrieve(normalized.artifact_digest)
+            )
+            assert normalized_manifest["source_version_id"] == str(first.version.id)
+            assert normalized_manifest["transformation"] == "pep-html-normalizer-v1"
             with manager.transaction() as transaction:
                 assert (
                     transaction.source_versions.get_source_version(access, first.version.id)

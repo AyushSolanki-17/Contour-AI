@@ -198,7 +198,7 @@ above persistence before HTTP routes are published.
 Owner role: backend
 Assignee: Codex
 Priority: P1
-Status: review
+Status: accepted
 Depends on: `P0-13B` accepted; explicit owner direction on 2026-08-31
 Product: `PROD-P0-01`
 Contract: implemented six-route `/api/v1` collection contract below; generated artifact includes the authenticated collections
@@ -275,26 +275,35 @@ conflicts are `409`, and infrastructure failure remains redacted
 
 #### Acceptance criteria
 
-- [ ] An authenticated client can create/list its Tenant, create/list a
+- [x] An authenticated client can create/list its Tenant, create/list a
       Workspace, and register/list a Source using only the generated contract.
-- [ ] A second Principal and Tenant cannot discover or operate on the first
+- [x] A second Principal and Tenant cannot discover or operate on the first
       Tenant through list results, guessed IDs, cursors, or idempotency keys.
-- [ ] Ordering, limit, cursor, idempotency, duplicate, validation, unsupported,
+- [x] Ordering, limit, cursor, idempotency, duplicate, validation, unsupported,
       redaction, and restart/concurrency behavior match the frozen contract.
-- [ ] Health stays public, every product route is authenticated, and no secret
+- [x] Health stays public, every product route is authenticated, and no secret
       is committed, logged, serialized, or exposed to the browser.
-- [ ] The generated OpenAPI artifact passes drift checks and is ready for an
+- [x] The generated OpenAPI artifact passes drift checks and is ready for an
       intentional frontend snapshot update.
-- [ ] Focused service, API, PostgreSQL, quality, documentation, and contract
+- [x] Focused service, API, PostgreSQL, quality, documentation, and contract
       checks pass.
+
+#### Verification evidence
+
+- [PR #14](https://github.com/AyushSolanki-17/Contour-AI/pull/14) published
+  the authenticated collection contract. Follow-up capability-boundary and
+  composition refactors through [PR #22](https://github.com/AyushSolanki-17/Contour-AI/pull/22)
+  retained the contract while keeping its service, transaction, and API owners
+  explicit.
+- The owner accepted the card on 2026-09-06 after the merged PR checks passed.
 
 ### P0-12 — Prove source-neutral normalization with the PEP fixture
 
 Owner role: backend
-Assignee: unassigned
+Assignee: Codex
 Priority: P2
-Status: planned
-Depends on: `P0-13` acceptance; owner direction checkpoint
+Status: review
+Depends on: `P0-13` accepted; owner direction checkpoint accepted on 2026-09-06
 Product: `PROD-P0-01`
 
 #### Goal
@@ -325,14 +334,25 @@ service boundary is accepted.
 
 #### Acceptance criteria
 
-- [ ] Repeated normalization of the same admitted bytes produces the same
+- [x] Repeated normalization of the same admitted bytes produces the same
       normalized digest and transformation metadata.
-- [ ] Representative normalized headers and content resolve to exact locators
+- [x] Representative normalized headers and content resolve to exact locators
       in the immutable source version.
-- [ ] Malformed input, locator loss, and corrupt derived artifacts fail rather
+- [x] Malformed input, locator loss, and corrupt derived artifacts fail rather
       than becoming accepted evidence.
-- [ ] Focused invariant and integration checks, `make quality`,
+- [x] Focused invariant and integration checks, `make quality`,
       `make openapi-check`, and `make docs` pass.
+
+#### Verification evidence
+
+- `tests/unit/infrastructure/source/test_pep_normalization.py` covers
+  deterministic normalized output, exact raw-byte locators, malformed input,
+  locator loss, and immutable raw-byte identity mismatch.
+- `tests/integration/postgres/test_pep_persistence.py` extends the admitted
+  PEP artifact path to verify that a normalized manifest retains its source
+  version and transformation identity. It runs in the explicit PostgreSQL tier.
+- The default quality floor passed on 2026-09-06: formatting, linting, strict
+  typing, 58 passing service-free tests, documentation links, and OpenAPI drift.
 
 #### Verification budget
 
@@ -353,8 +373,8 @@ next proposed card, why it is next, and what remains deferred. A planned card
 stays unassigned; there are no dependency-gated reserve assignments.
 
 The owner replaced the earlier single-user assumption with a multi-tenant MVP
-requirement on 2026-08-30. `P0-13A` and `P0-13B` are accepted. The implemented
-`P0-13` contract is in review; `P0-12` remains planned and unassigned. Acceptance
+requirement on 2026-08-30. `P0-13A`, `P0-13B`, and `P0-13` are accepted. The
+owner promoted `P0-12` on 2026-09-06; it is the only active card. Acceptance
 and queue refill remain a reviewer/coordinator decision unless the owner
 explicitly directs otherwise.
 
@@ -376,6 +396,7 @@ explicitly directs otherwise.
 | `P0-11A` | `done` | Source-neutral acquisition and persistence contracts accepted with reference-source policy isolated in infrastructure. |
 | `P0-13A` | `done` | Tenant-owned durable persistence with composite foreign-key isolation and populated-database migration accepted. |
 | `P0-13B` | `done` | Provider-neutral principal membership and verified tenant-scoped application services accepted. |
+| `P0-13` | `done` | Authenticated, tenant-scoped Tenant, Workspace, and Source collection contract accepted. |
 
 Detailed acceptance evidence is retained in the
 [completed-task log](docs/development/task-history.md) and Git history.

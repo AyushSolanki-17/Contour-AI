@@ -39,6 +39,9 @@ date without rewriting what was actually delivered.
 
 ### Added
 
+- Deterministic PEP fixture normalization with a source-neutral normalized
+  manifest, raw source-version derivation, exact raw-byte locators, and a
+  content-addressed normalized artifact.
 - Authenticated, tenant-scoped Tenant, Workspace, and Source collection routes
   with opaque configured local credentials, non-enumerating nested access,
   durable idempotency replay, and signed scope-bound pagination cursors.

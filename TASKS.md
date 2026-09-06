@@ -1,7 +1,7 @@
 # Contour Active Work
 
-**Status:** authenticated collection contract awaiting acceptance
-**Updated:** 2026-09-01
+**Status:** no active card; normalization contract accepted
+**Updated:** 2026-09-06
 
 This is the bounded execution queue for work promoted from the ordered
 [backend roadmap](docs/development/roadmap.md). Claim exactly one `ready` card
@@ -302,7 +302,7 @@ conflicts are `409`, and infrastructure failure remains redacted
 Owner role: backend
 Assignee: Codex
 Priority: P2
-Status: review
+Status: accepted
 Depends on: `P0-13` accepted; owner direction checkpoint accepted on 2026-09-06
 Product: `PROD-P0-01`
 
@@ -373,10 +373,9 @@ next proposed card, why it is next, and what remains deferred. A planned card
 stays unassigned; there are no dependency-gated reserve assignments.
 
 The owner replaced the earlier single-user assumption with a multi-tenant MVP
-requirement on 2026-08-30. `P0-13A`, `P0-13B`, and `P0-13` are accepted. The
-owner promoted `P0-12` on 2026-09-06; it is the only active card. Acceptance
-and queue refill remain a reviewer/coordinator decision unless the owner
-explicitly directs otherwise.
+requirement on 2026-08-30. `P0-13A`, `P0-13B`, `P0-13`, and `P0-12` are
+accepted. There is no active card. Queue refill remains a reviewer/coordinator
+decision unless the owner explicitly directs otherwise.
 
 ## Recently completed
 
@@ -397,6 +396,7 @@ explicitly directs otherwise.
 | `P0-13A` | `done` | Tenant-owned durable persistence with composite foreign-key isolation and populated-database migration accepted. |
 | `P0-13B` | `done` | Provider-neutral principal membership and verified tenant-scoped application services accepted. |
 | `P0-13` | `done` | Authenticated, tenant-scoped Tenant, Workspace, and Source collection contract accepted. |
+| `P0-12` | `done` | Source-neutral PEP normalization with exact raw-byte locators and derived-artifact integrity enforcement accepted. |
 
 Detailed acceptance evidence is retained in the
 [completed-task log](docs/development/task-history.md) and Git history.

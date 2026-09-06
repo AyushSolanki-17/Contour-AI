@@ -126,6 +126,7 @@ src/contour/
     application/
       collections.py              workspace-scoped registration, listing and private replay reconstruction
       persistence.py              artifact-first immutable version admission
+      normalization.py            artifact-first normalized manifest persistence
       ports.py                    source/version repositories, workspace lookup and transaction
       artifact_store.py           exact content-addressed artifact contract
       errors.py                   registration and connector admission errors
